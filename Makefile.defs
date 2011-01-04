@@ -1,0 +1,32 @@
+################## Project Specific Entries #######################
+#
+# These values override other definitions
+#
+# Project name
+
+PROJECT=roach2_bsp
+# module ID -> 16 bit hex (0xCAFE == 51966)
+BOARD_ID=51966
+REV_MAJOR=0
+REV_MINOR=0
+RCS_UPTODATE=0
+REV_RCS=0
+# Pin Constraints
+PCFILE=constraints/roach2_rev0.ucf
+# Enter your source files here space seperated
+#      Note: no spaces in filenames
+SRC=./modules/toplevel/hdl/toplevel.v \
+    ./modules/toplevel/hdl/gtx_skeleton.v \
+    ./modules/toplevel/hdl/gtx_wrapper_gtx.v \
+    ./modules/toplevel/hdl/gtx_wrapper.v
+
+# Module name of toplevel entity
+TOPLEVEL_MODULE=toplevel
+# Logic Device Part Number
+PARTNUM=6vsx475t-ff1759-1
+
+# Verilog Include Directory
+VINC=include
+
+GEN_DIR=gen
+NETLIST_DIR=netlist
