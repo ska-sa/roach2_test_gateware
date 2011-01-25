@@ -1,6 +1,10 @@
 # ROACH 2 REV 0
 # FPGA constraints file
 
+Net clk_125 TNM_NET = clk_125;
+TIMESPEC TS_clk_125 = PERIOD clk_125 125 MHz;
+
+
 # VRN/VRP sharing
 
 CONFIG DCI_CASCADE = "14 13";

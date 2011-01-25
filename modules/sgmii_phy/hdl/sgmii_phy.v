@@ -37,8 +37,7 @@ module sgmii_phy (
     output       sgmii_resetdone,
 
     input        sgmii_loopback,
-    input        sgmii_powerdown,
-
+    input        sgmii_powerdown
   );
 
 
@@ -58,11 +57,10 @@ module sgmii_phy (
   // Global buffer for output clock
 
   // gtp refclk out
-  wire clk125_o;
-  wire clk125;
-  BUFG bufg_clk125 (
-     .I (clk125_o),
-     .O (clk125)
+  wire clk_125_o;
+  BUFG bufg_clk_125 (
+     .I (clk_125_o),
+     .O (clk_125)
   );
 
   rocketio_wrapper_top rocketio_wrapper_top_inst (
@@ -71,13 +69,13 @@ module sgmii_phy (
       .ENPCOMMAALIGN  (sgmii_encommaalign),
       .LOOPBACK       (sgmii_loopback),
       .POWERDOWN      (sgmii_powerdown),
-      .RXUSRCLK2      (clk125),
+      .RXUSRCLK2      (clk_125),
       .RXRESET        (sgmii_rxreset),
       .TXCHARDISPMODE (sgmii_txdispmode),
       .TXCHARDISPVAL  (sgmii_txdispval),
       .TXCHARISK      (sgmii_txisk),
       .TXDATA         (sgmii_txd),
-      .TXUSRCLK2      (clk125),
+      .TXUSRCLK2      (clk_125),
       .TXRESET        (sgmii_txreset),
       .RXCHARISCOMMA  (sgmii_rxiscomma),
       .RXCHARISK      (sgmii_rxisk),
@@ -98,7 +96,5 @@ module sgmii_phy (
       .CLK_DS         (clk_ds),
       .PMARESET       (mgt_reset)
   );
-
-  assign RESETDONE = resetdone_i;
 
 endmodule

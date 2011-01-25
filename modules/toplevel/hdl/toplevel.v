@@ -943,25 +943,138 @@ module toplevel(
                    )
   );
 
-  wire [2:0] dummy0;
-  wire [2:0] dummy1;
-  wire sgmii_clk;
+  /********* SGMII PHY ************/
 
-  gtx_skeleton gtx_quad_118(
-    .rx_n         ({3'b0, sgmii_rx_n}),
-    .rx_p         ({3'b0, sgmii_rx_p}),
-    .tx_n         ({dummy0, sgmii_tx_n}),
-    .tx_p         ({dummy1, sgmii_tx_p}),
+  /* TODO: do we need to reset this beastie */
+  wire       sgmii_reset = 1'b0;
 
-    .mgtrefclk0_n (sgmii_clkref_n),
-    .mgtrefclk0_p (sgmii_clkref_p),
-    .mgtrefclk1_n (),
-    .mgtrefclk1_p (),
-    .refclk_o_0   (sgmii_clk),
-    .refclk_o_1   (),
+  // Make sure clk_125 is not renamed
+  // synthesis attribute KEEP of clk_125 is TRUE
+  wire       clk_125;
+
+  wire [7:0] sgmii_txd;
+  wire       sgmii_txisk;
+  wire       sgmii_txdispmode;
+  wire       sgmii_txdispval;
+  wire       sgmii_txbuferr;
+  wire       sgmii_txreset;
+
+  wire [7:0] sgmii_rxd;
+  wire       sgmii_rxiscomma;
+  wire       sgmii_rxisk;
+  wire       sgmii_rxdisperr;
+  wire       sgmii_rxnotintable;
+  wire       sgmii_rxrundisp;
+  wire [2:0] sgmii_rxclkcorcnt;
+  wire       sgmii_rxbufstatus;
+  wire       sgmii_rxreset;
+
+  wire       sgmii_encommaalign;
+  wire       sgmii_pll_locked;
+  wire       sgmii_elecidle;
+
+  wire       sgmii_resetdone;
+
+  wire       sgmii_loopback;
+  wire       sgmii_powerdown;
+
+  sgmii_phy sgmii_phy_inst (
+    .mgt_rx_n           (sgmii_rx_n),
+    .mgt_rx_p           (sgmii_rx_p),
+    .mgt_tx_n           (sgmii_tx_n),
+    .mgt_tx_p           (sgmii_tx_p),
+    .mgt_clk_n          (sgmii_clkref_n),
+    .mgt_clk_p          (sgmii_clkref_p),
+
+    .mgt_reset          (sgmii_reset),
+
+    .clk_125            (clk_125),
+
+    .sgmii_txd          (sgmii_txd),
+    .sgmii_txisk        (sgmii_txisk),
+    .sgmii_txdispmode   (sgmii_txdispmode),
+    .sgmii_txdispval    (sgmii_txdispval),
+    .sgmii_txbuferr     (sgmii_txbuferr),
+    .sgmii_txreset      (sgmii_txreset),
+
+    .sgmii_rxd          (sgmii_rxd),
+    .sgmii_rxiscomma    (sgmii_rxiscomma),
+    .sgmii_rxisk        (sgmii_rxisk),
+    .sgmii_rxdisperr    (sgmii_rxdisperr),
+    .sgmii_rxnotintable (sgmii_rxnotintable),
+    .sgmii_rxrundisp    (sgmii_rxrundisp),
+    .sgmii_rxclkcorcnt  (sgmii_rxclkcorcnt),
+    .sgmii_rxbufstatus  (sgmii_rxbufstatus),
+    .sgmii_rxreset      (sgmii_rxreset),
     
-    .refclk_i     (sgmii_clk)
+
+    .sgmii_encommaalign (sgmii_encommaalign),
+    .sgmii_pll_locked   (sgmii_pll_locked),
+    .sgmii_elecidle     (sgmii_elecidle),
+    .sgmii_resetdone    (sgmii_resetdone),
+
+    .sgmii_loopback     (sgmii_loopback),
+    .sgmii_powerdown    (sgmii_powerdown)
   );
 
+  // MAC interface
+  wire       mac_rx_clk;
+  wire [7:0] mac_rx_data;
+  wire       mac_rx_dvld;
+  wire       mac_rx_goodframe;
+  wire       mac_rx_badframe;
+
+  wire       mac_tx_clk;
+  wire [7:0] mac_tx_data;
+  wire       mac_tx_dvld;
+  wire       mac_tx_ack;
+
+  temac #(
+    .REG_SGMII (0),
+    .PHY_ADR   (4'b0000)
+  ) temac_inst (
+    .clk_125            (clk_125),
+    .reset              (sgmii_reset),
+    .sgmii_txd          (sgmii_txd),
+    .sgmii_txisk        (sgmii_txisk),
+    .sgmii_txdispmode   (sgmii_txdispmode),
+    .sgmii_txdispval    (sgmii_txdispval),
+    .sgmii_txbuferr     (sgmii_txbuferr),
+    .sgmii_txreset      (sgmii_txreset),
+
+    .sgmii_rxd          (sgmii_rxd),
+    .sgmii_rxiscomma    (sgmii_rxiscomma),
+    .sgmii_rxisk        (sgmii_rxisk),
+    .sgmii_rxdisperr    (sgmii_rxdisperr),
+    .sgmii_rxnotintable (sgmii_rxnotintable),
+    .sgmii_rxrundisp    (sgmii_rxrundisp),
+    .sgmii_rxclkcorcnt  (sgmii_rxclkcorcnt),
+    .sgmii_rxbufstatus  (sgmii_rxbufstatus),
+    .sgmii_rxreset      (sgmii_rxreset),
+    
+    .sgmii_encommaalign (sgmii_encommaalign),
+    .sgmii_pll_locked   (sgmii_pll_locked),
+    .sgmii_elecidle     (sgmii_elecidle),
+
+    .sgmii_resetdone    (sgmii_resetdone),
+
+    .sgmii_loopback     (sgmii_loopback),
+    .sgmii_powerdown    (sgmii_powerdown),
+
+    .mac_rx_clk         (mac_rx_clk),
+    .mac_rx_data        (mac_rx_data),
+    .mac_rx_dvld        (mac_rx_dvld),
+    .mac_rx_goodframe   (mac_rx_goodframe),
+    .mac_rx_badframe    (mac_rx_badframe),
+
+    .mac_tx_clk         (mac_tx_clk),
+    .mac_tx_data        (mac_tx_data),
+    .mac_tx_dvld        (mac_tx_dvld),
+    .mac_tx_ack         (mac_tx_ack)
+  );
+
+  // fake loopback
+  assign mac_tx_data = mac_rx_data;
+  assign mac_tx_dvld = mac_rx_dvld;
 
 endmodule
