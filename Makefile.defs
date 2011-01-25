@@ -16,9 +16,10 @@ PCFILE=constraints/roach2_rev0.ucf
 # Enter your source files here space seperated
 #      Note: no spaces in filenames
 SRC=./modules/toplevel/hdl/toplevel.v \
-    ./modules/toplevel/hdl/gtx_skeleton.v \
-    ./modules/toplevel/hdl/gtx_wrapper_gtx.v \
-    ./modules/toplevel/hdl/gtx_wrapper.v
+		./modules/sgmii_phy/hdl/rocketio_wrapper_gtx.v \
+		./modules/sgmii_phy/hdl/rocketio_wrapper_top.v \
+		./modules/sgmii_phy/hdl/rocketio_wrapper.v  \
+		./modules/sgmii_phy/hdl/sgmii_phy.v
 
 # Module name of toplevel entity
 TOPLEVEL_MODULE=toplevel
