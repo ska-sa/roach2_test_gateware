@@ -17,17 +17,10 @@ PCFILE=constraints/roach2_rev0.ucf
 #      Note: no spaces in filenames
 
 SRC=./modules/toplevel/hdl/toplevel.v \
-    ./modules/toplevel/hdl/gtx_skeleton.v \
-    ./modules/toplevel/hdl/gtx_wrapper_gtx.v \
-    ./modules/toplevel/hdl/gtx_wrapper.v \
-		./modules/sgmii_phy/hdl/rx_elastic_buffer.v \
-		./modules/sgmii_phy/hdl/rocketio_wrapper_gtx.v \
-		./modules/sgmii_phy/hdl/rocketio_wrapper_top.v \
-		./modules/sgmii_phy/hdl/rocketio_wrapper.v  \
-		./modules/sgmii_phy/hdl/sgmii_phy.v \
-		./modules/temac/hdl/temac.v  \
-		./modules/temac/hdl/emac_wrapper.v
-
+		./modules/knight_rider/hdl/knight_rider.v \
+		./modules/knight_rider/hdl/pwm_sm.v \
+		./modules/epb_infrastructure/hdl/epb_infrastructure.v \
+		./modules/epb_wb_bridge_reg/hdl/epb_wb_bridge_reg.v
 
 # Module name of toplevel entity
 TOPLEVEL_MODULE=toplevel
