@@ -41,7 +41,9 @@ module temac #(
     output       mac_tx_clk,
     input  [7:0] mac_tx_data,
     input        mac_tx_dvld,
-    output       mac_tx_ack
+    output       mac_tx_ack,
+
+    output       mac_syncacquired
   );
 
   // SGMII intermediate signals
@@ -71,38 +73,91 @@ module temac #(
   wire       sgmii_loopback_int;
   wire       sgmii_powerdown_int;
 
-generate if (REG_SGMII == 0) begin : no_sgmii_reg
+  reg [7:0] sgmii_txd_reg;
+  reg       sgmii_txisk_reg;
+  reg       sgmii_txdispmode_reg;
+  reg       sgmii_txdispval_reg;
+  reg       sgmii_txbuferr_reg;
+  reg       sgmii_txreset_reg;
 
-  assign sgmii_txd               = sgmii_txd_int;          
-  assign sgmii_txisk             = sgmii_txisk_int;
-  assign sgmii_txdispmode        = sgmii_txdispmode_int;
-  assign sgmii_txdispval         = sgmii_txdispval_int;
-  assign sgmii_txbuferr_int      = sgmii_txbuferr;
-  assign sgmii_txreset           = sgmii_txreset_int;
+  reg [7:0] sgmii_rxd_reg;
+  reg       sgmii_rxiscomma_reg;
+  reg       sgmii_rxisk_reg;
+  reg       sgmii_rxdisperr_reg;
+  reg       sgmii_rxnotintable_reg;
+  reg       sgmii_rxrundisp_reg;
+  reg [2:0] sgmii_rxclkcorcnt_reg;
+  reg       sgmii_rxbufstatus_reg;
+  reg       sgmii_rxreset_reg;
+
+  reg       sgmii_encommaalign_reg;
+  reg       sgmii_pll_locked_reg;
+  reg       sgmii_elecidle_reg;
+
+  reg       sgmii_resetdone_reg;
+
+  reg       sgmii_loopback_reg;
+  reg       sgmii_powerdown_reg;
+
+  /* These registers are needed because these signals go between to hard macros
+     that are far apart */
+
+  always @(posedge clk_125) begin
+    sgmii_txd_reg          <= sgmii_txd_int;          
+    sgmii_txisk_reg        <= sgmii_txisk_int;
+    sgmii_txdispmode_reg   <= sgmii_txdispmode_int;
+    sgmii_txdispval_reg    <= sgmii_txdispval_int;
+    sgmii_txreset_reg      <= sgmii_txreset_int;
+
+    sgmii_encommaalign_reg <= sgmii_encommaalign_int;
+    sgmii_rxreset_reg      <= sgmii_rxreset_int;
+    sgmii_loopback_reg     <= sgmii_loopback_int;
+    sgmii_powerdown_reg    <= sgmii_powerdown_int;
+
+    sgmii_txbuferr_reg     <= sgmii_txbuferr;
+
+    sgmii_rxd_reg          <= sgmii_rxd;
+    sgmii_rxiscomma_reg    <= sgmii_rxiscomma;
+    sgmii_rxisk_reg        <= sgmii_rxisk;
+    sgmii_rxdisperr_reg    <= sgmii_rxdisperr;
+    sgmii_rxnotintable_reg <= sgmii_rxnotintable;
+    sgmii_rxrundisp_reg    <= sgmii_rxrundisp;
+    sgmii_rxclkcorcnt_reg  <= sgmii_rxclkcorcnt;
+    sgmii_rxbufstatus_reg  <= sgmii_rxbufstatus;
+
+    sgmii_pll_locked_reg   <= sgmii_pll_locked;
+    sgmii_elecidle_reg     <= sgmii_elecidle;
+
+    sgmii_resetdone_reg    <= sgmii_resetdone;
+  end
+
+  assign sgmii_txd          = sgmii_txd_reg;          
+  assign sgmii_txisk        = sgmii_txisk_reg;
+  assign sgmii_txdispmode   = sgmii_txdispmode_reg;
+  assign sgmii_txdispval    = sgmii_txdispval_reg;
+  assign sgmii_txreset      = sgmii_txreset_reg;
+
+  assign sgmii_encommaalign = sgmii_encommaalign_reg;
+  assign sgmii_rxreset      = sgmii_rxreset_reg;
+  assign sgmii_loopback     = sgmii_loopback_reg;
+  assign sgmii_powerdown    = sgmii_powerdown_reg;
+
+  assign sgmii_txbuferr_int      = sgmii_txbuferr_reg;
                                  
-  assign sgmii_rxd_int           = sgmii_rxd;
-  assign sgmii_rxiscomma_int     = sgmii_rxiscomma;
-  assign sgmii_rxisk_int         = sgmii_rxisk;
-  assign sgmii_rxdisperr_int     = sgmii_rxdisperr;
-  assign sgmii_rxnotintable_int  = sgmii_rxnotintable;
-  assign sgmii_rxrundisp_int     = sgmii_rxrundisp;
-  assign sgmii_rxclkcorcnt_int   = sgmii_rxclkcorcnt;
-  assign sgmii_rxbufstatus_int   = sgmii_rxbufstatus;
-  assign sgmii_rxreset           = sgmii_rxreset_int;
+  assign sgmii_rxd_int           = sgmii_rxd_reg;
+  assign sgmii_rxiscomma_int     = sgmii_rxiscomma_reg;
+  assign sgmii_rxisk_int         = sgmii_rxisk_reg;
+  assign sgmii_rxdisperr_int     = sgmii_rxdisperr_reg;
+  assign sgmii_rxnotintable_int  = sgmii_rxnotintable_reg;
+  assign sgmii_rxrundisp_int     = sgmii_rxrundisp_reg;
+  assign sgmii_rxclkcorcnt_int   = sgmii_rxclkcorcnt_reg;
+  assign sgmii_rxbufstatus_int   = sgmii_rxbufstatus_reg;
 
-  assign sgmii_encommaalign      = sgmii_encommaalign_int;
-  assign sgmii_pll_locked_int    = sgmii_pll_locked;
-  assign sgmii_elecidle_int      = sgmii_elecidle;
+  assign sgmii_pll_locked_int    = sgmii_pll_locked_reg;
+  assign sgmii_elecidle_int      = sgmii_elecidle_reg;
                                                                            
-  assign sgmii_resetdone_int     = sgmii_resetdone;
+  assign sgmii_resetdone_int     = sgmii_resetdone_reg;
                                                                            
-  assign sgmii_loopback          = sgmii_loopback_int;
-  assign sgmii_powerdown         = sgmii_powerdown_int;
-
-end else begin : sgmii_reg
- /* TODO */
-
-end endgenerate
 
   /***** Reset Gen *****/
   reg [3:0] reset_r;
@@ -110,7 +165,7 @@ end endgenerate
     if (reset) begin
       reset_r <= 4'b1111;
     end else begin
-      if (sgmii_pll_locked) begin
+      if (sgmii_pll_locked_int) begin
         reset_r <= {reset_r[2:0], reset};
       end
     end
@@ -125,22 +180,15 @@ end endgenerate
     .O (mac_tx_clk)
   );
 
-  /***** MAC RX clocking *****/
-
-  BUFG bufg_mac_xx(
-    .I (mac_rx_clk_bufg),
-    .O (mac_rx_clk)
-  );
-
   /* Potential useful debug signals */
-  wire mac_syncacquired;
   wire mac_an_interrupt;
+  assign mac_rx_clk = mac_tx_clk;
 
   emac_wrapper emac_wrapper_inst
   (
     // Client receiver interface
-    .EMACCLIENTRXCLIENTCLKOUT    (mac_rx_clk_bufg),
-    .CLIENTEMACRXCLIENTCLKIN     (mac_rx_clk),
+    .EMACCLIENTRXCLIENTCLKOUT    (),
+    .CLIENTEMACRXCLIENTCLKIN     (mac_tx_clk),
     .EMACCLIENTRXD               (mac_rx_data),
     .EMACCLIENTRXDVLD            (mac_rx_dvld),
     .EMACCLIENTRXDVLDMSW         (),

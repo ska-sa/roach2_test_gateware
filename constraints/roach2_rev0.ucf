@@ -1,8 +1,8 @@
 # ROACH 2 REV 0
 # FPGA constraints file
 
-#Net clk_125 TNM_NET = clk_125;
-#TIMESPEC TS_clk_125 = PERIOD clk_125 125 MHz;
+Net clk_125 TNM_NET = clk_125;
+TIMESPEC TS_clk_125 = PERIOD clk_125 125 MHz;
 
 Net sys_clk TNM_NET = sys_clk;
 TIMESPEC TS_sys_clk = PERIOD sys_clk 100 MHz;
@@ -835,16 +835,16 @@ NET "ppc_pdata<31>"      LOC = AJ33;
 #NET "zdok1_dp_p<35>"     LOC = R40;
 #NET "zdok1_dp_p<36>"     LOC = N36;
 #NET "zdok1_dp_p<37>"     LOC = N38;
-#
-## SGMII (1Ge port)
-#
-#NET "sgmii_clkref_n"     LOC = C9;
-#NET "sgmii_clkref_p"     LOC = C10;
-#NET "sgmii_rx_n"         LOC = D8;
-#NET "sgmii_rx_p"         LOC = D7;
-#NET "sgmii_tx_n"         LOC = E2;
-#NET "sgmii_tx_p"         LOC = E1;
-#
+
+# SGMII (1Ge port)
+
+NET "sgmii_clkref_n"     LOC = C9;
+NET "sgmii_clkref_p"     LOC = C10;
+NET "sgmii_rx_n"         LOC = D8;
+NET "sgmii_rx_p"         LOC = D7;
+NET "sgmii_tx_n"         LOC = E2;
+NET "sgmii_tx_p"         LOC = E1;
+
 ### MGT external clocks
 #
 ## XAUI reference clk (156.25 MHz)

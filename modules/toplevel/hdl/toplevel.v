@@ -23,7 +23,7 @@ module toplevel(
     output         ppc_prdy,
     output         ppc_doen,
 
-    output         ppc_irqn
+    output         ppc_irqn,
 
     /*
 
@@ -107,6 +107,7 @@ module toplevel(
     input    [2:0] misc_clkref_p,
     input    [7:0] ext_refclk_p,
     input    [7:0] ext_refclk_n,
+    */
 
     input          sgmii_rx_n,
     input          sgmii_rx_p,
@@ -114,12 +115,15 @@ module toplevel(
     output         sgmii_tx_p,
     input          sgmii_clkref_n,
     input          sgmii_clkref_p
-    */
   );
+  
+  // Make sure clk_125 is not renamed
+  // synthesis attribute KEEP of clk_125 is TRUE
+  wire clk_125;
+  // synthesis attribute KEEP of sys_clk is TRUE
+  wire sys_clk;
 
   /***************** system signals *****************/
-  
-  wire sys_rst = 1'b0;
 
   wire sys_clk_ds;
   IBUFGDS #(
@@ -131,17 +135,32 @@ module toplevel(
     .O (sys_clk_ds)
   );
 
-  // synthesis attribute KEEP of sys_clk is TRUE
-  wire sys_clk;
   BUFG bufg_sys_clk(
     .I(sys_clk_ds),
     .O(sys_clk)
   );
+  
+  /* reset gen */
+  reg sys_rst;
+  reg [15:0] sys_rst_counter;
+  always @(posedge sys_clk) begin
+    sys_rst_counter <= sys_rst_counter + 16'd1;
+
+    if (sys_rst_counter == {16{1'b1}}) begin
+      sys_rst <= 1'b0;
+      sys_rst_counter <= {16{1'b1}};
+    end else begin
+      sys_rst <= 1'b1;
+    end
+  end
+
+  wire [2:0] knight_rider_speed;
 
   knight_rider knight_rider_inst(
-    .clk (sys_clk),
-    .rst (sys_rst),
-    .led (v6_gpio[7:0]) 
+    .clk  (sys_clk),
+    .rst  (sys_rst),
+    .led  (v6_gpio[7:0]),
+    .rate (knight_rider_speed)
   );
 
   wire wb_clk_i, wb_rst_i;
@@ -159,11 +178,6 @@ module toplevel(
   wire [0:31] epb_data_o;
   wire        epb_data_oe_n;
   wire        epb_clk;
-
-  reg foo;
-  always @(posedge sys_clk) begin
-    foo <= ~foo;
-  end
 
   epb_infrastructure epb_infrastructure_inst(
     .epb_data_buf  (ppc_pdata),
@@ -199,28 +213,101 @@ module toplevel(
     .epb_rdy       (ppc_prdy),
     .epb_doen      (ppc_doen)
   );
+  wire        debug_clk;
+  wire [31:0] regin_0;
+  wire [31:0] regin_1;
+  wire [31:0] regin_2;
+  wire [31:0] regin_3;
+  wire [31:0] regin_4;
+  wire [31:0] regin_5;
+  wire [31:0] regin_6;
+  wire [31:0] regin_7;
+
+  wire [31:0] regout_0;
+  wire [31:0] regout_1;
+  wire [31:0] regout_2;
+  wire [31:0] regout_3;
+  wire [31:0] regout_4;
+  wire [31:0] regout_5;
+  wire [31:0] regout_6;
+  wire [31:0] regout_7;
+
+  wb_debug wb_debug_inst(
+    .wb_clk_i (wb_clk_i),
+    .wb_rst_i (wb_rst_i),
+    .wb_cyc_i (wb_cyc_o),
+    .wb_stb_i (wb_stb_o),
+    .wb_we_i  (wb_we_o),
+    .wb_sel_i (wb_sel_o),
+    .wb_adr_i (wb_adr_o),
+    .wb_dat_i (wb_dat_o),
+    .wb_dat_o (wb_dat_i),
+    .wb_ack_o (wb_ack_i),
+    .wb_err_o (wb_err_i),
+
+    .debug_clk(debug_clk),
+    .regin_0(regin_0),
+    .regin_1(regin_1),
+    .regin_2(regin_2),
+    .regin_3(regin_3),
+    .regin_4(regin_4),
+    .regin_5(regin_5),
+    .regin_6(regin_6),
+    .regin_7(regin_7),
+
+    .regout_0(regout_0),
+    .regout_1(regout_1),
+    .regout_2(regout_2),
+    .regout_3(regout_3),
+    .regout_4(regout_4),
+    .regout_5(regout_5),
+    .regout_6(regout_6),
+    .regout_7(regout_7),
+
+    .fifo_wr_in(fifo_wr_in),
+    .fifo_wr_en(fifo_wr_en)
+  );
+
+  /*
 
   reg [31:0] scratch0;
   reg [31:0] scratch1;
   reg [31:0] misc0;
   reg [31:0] misc1;
+  reg [31:0] misc2;
+  reg [31:0] misc3;
+  reg [31:0] misc4;
+  reg [31:0] misc5;
 
   reg wb_ack_i_reg;
   assign wb_ack_i = wb_ack_i_reg;
 
+  assign knight_rider_speed = scratch1[2:0];
+
+  reg [31:0] debug;
+
+  always @(posedge clk_125) begin
+    misc0 <= debug;
+  end
+
+  reg [31:0] misc0_R;
+  reg [31:0] misc0_RR;
+
   always @(posedge wb_clk_i) begin
+    misc0_R  <= misc0;
+    misc0_RR <= misc0_R;
+
     wb_ack_i_reg <= 1'b0;
     if (wb_rst_i) begin
       scratch0 <= 32'hdeadbeef;
-      scratch1 <= 32'hdefaced;
-      misc0    <= 32'b0;
+      scratch1 <= 32'h1;
       misc1    <= 32'b0;
     end else begin
       if (wb_stb_o && wb_cyc_o) begin
         wb_ack_i_reg <= 1'b1;
 
         if (wb_we_o) begin
-          case (wb_adr_o[3:2])
+          case (wb_adr_o[4:2])
             2'b00: begin
               scratch0 <= wb_dat_o;
             end
@@ -228,7 +315,6 @@ module toplevel(
               scratch1 <= wb_dat_o;
             end
             2'b10: begin
-              misc0    <= {wb_sel_o, wb_adr_o[27:0]};
             end
             2'b11: begin
             end
@@ -250,14 +336,18 @@ module toplevel(
   assign wb_dat_i = wb_dat_i_reg;
 
   always @(*) begin
-    case (wb_adr_o[3:2])
-      2'd0:    wb_dat_i_reg <= scratch0;
-      2'd1:    wb_dat_i_reg <= scratch1;
-      2'd2:    wb_dat_i_reg <= misc0;
-      2'd3:    wb_dat_i_reg <= misc1;
-      default: wb_dat_i_reg <= 32'b0;
+    case (wb_adr_o[4:2])
+      3'd0:    wb_dat_i_reg <= scratch0;
+      3'd1:    wb_dat_i_reg <= scratch1;
+      3'd2:    wb_dat_i_reg <= misc0_RR;
+      3'd3:    wb_dat_i_reg <= misc1;
+      3'd4:    wb_dat_i_reg <= misc2;
+      3'd5:    wb_dat_i_reg <= misc3;
+      3'd6:    wb_dat_i_reg <= misc4;
+      3'd7:    wb_dat_i_reg <= misc5;
     endcase
   end
+  */
 
   OBUF #(
     .IOSTANDARD("LVCMOS25")
@@ -1085,139 +1175,262 @@ module toplevel(
 //                                             xaui_clkref_2
 //                 )
 //);
-//
-///********* SGMII PHY ************/
-//
-///* TODO: do we need to reset this beastie */
-//wire       sgmii_reset = 1'b0;
-//
-//// Make sure clk_125 is not renamed
-//// synthesis attribute KEEP of clk_125 is TRUE
-//wire       clk_125;
-//
-//wire [7:0] sgmii_txd;
-//wire       sgmii_txisk;
-//wire       sgmii_txdispmode;
-//wire       sgmii_txdispval;
-//wire       sgmii_txbuferr;
-//wire       sgmii_txreset;
-//
-//wire [7:0] sgmii_rxd;
-//wire       sgmii_rxiscomma;
-//wire       sgmii_rxisk;
-//wire       sgmii_rxdisperr;
-//wire       sgmii_rxnotintable;
-//wire       sgmii_rxrundisp;
-//wire [2:0] sgmii_rxclkcorcnt;
-//wire       sgmii_rxbufstatus;
-//wire       sgmii_rxreset;
-//
-//wire       sgmii_encommaalign;
-//wire       sgmii_pll_locked;
-//wire       sgmii_elecidle;
-//
-//wire       sgmii_resetdone;
-//
-//wire       sgmii_loopback;
-//wire       sgmii_powerdown;
-//
-//sgmii_phy sgmii_phy_inst (
-//  .mgt_rx_n           (sgmii_rx_n),
-//  .mgt_rx_p           (sgmii_rx_p),
-//  .mgt_tx_n           (sgmii_tx_n),
-//  .mgt_tx_p           (sgmii_tx_p),
-//  .mgt_clk_n          (sgmii_clkref_n),
-//  .mgt_clk_p          (sgmii_clkref_p),
-//
-//  .mgt_reset          (sgmii_reset),
-//
-//  .clk_125            (clk_125),
-//
-//  .sgmii_txd          (sgmii_txd),
-//  .sgmii_txisk        (sgmii_txisk),
-//  .sgmii_txdispmode   (sgmii_txdispmode),
-//  .sgmii_txdispval    (sgmii_txdispval),
-//  .sgmii_txbuferr     (sgmii_txbuferr),
-//  .sgmii_txreset      (sgmii_txreset),
-//
-//  .sgmii_rxd          (sgmii_rxd),
-//  .sgmii_rxiscomma    (sgmii_rxiscomma),
-//  .sgmii_rxisk        (sgmii_rxisk),
-//  .sgmii_rxdisperr    (sgmii_rxdisperr),
-//  .sgmii_rxnotintable (sgmii_rxnotintable),
-//  .sgmii_rxrundisp    (sgmii_rxrundisp),
-//  .sgmii_rxclkcorcnt  (sgmii_rxclkcorcnt),
-//  .sgmii_rxbufstatus  (sgmii_rxbufstatus),
-//  .sgmii_rxreset      (sgmii_rxreset),
-//  
-//
-//  .sgmii_encommaalign (sgmii_encommaalign),
-//  .sgmii_pll_locked   (sgmii_pll_locked),
-//  .sgmii_elecidle     (sgmii_elecidle),
-//  .sgmii_resetdone    (sgmii_resetdone),
-//
-//  .sgmii_loopback     (sgmii_loopback),
-//  .sgmii_powerdown    (sgmii_powerdown)
-//);
-//
-//// MAC interface
-//wire       mac_rx_clk;
-//wire [7:0] mac_rx_data;
-//wire       mac_rx_dvld;
-//wire       mac_rx_goodframe;
-//wire       mac_rx_badframe;
-//
-//wire       mac_tx_clk;
-//wire [7:0] mac_tx_data;
-//wire       mac_tx_dvld;
-//wire       mac_tx_ack;
-//
-//temac #(
-//  .REG_SGMII (0),
-//  .PHY_ADR   (4'b0000)
-//) temac_inst (
-//  .clk_125            (clk_125),
-//  .reset              (sgmii_reset),
-//  .sgmii_txd          (sgmii_txd),
-//  .sgmii_txisk        (sgmii_txisk),
-//  .sgmii_txdispmode   (sgmii_txdispmode),
-//  .sgmii_txdispval    (sgmii_txdispval),
-//  .sgmii_txbuferr     (sgmii_txbuferr),
-//  .sgmii_txreset      (sgmii_txreset),
-//
-//  .sgmii_rxd          (sgmii_rxd),
-//  .sgmii_rxiscomma    (sgmii_rxiscomma),
-//  .sgmii_rxisk        (sgmii_rxisk),
-//  .sgmii_rxdisperr    (sgmii_rxdisperr),
-//  .sgmii_rxnotintable (sgmii_rxnotintable),
-//  .sgmii_rxrundisp    (sgmii_rxrundisp),
-//  .sgmii_rxclkcorcnt  (sgmii_rxclkcorcnt),
-//  .sgmii_rxbufstatus  (sgmii_rxbufstatus),
-//  .sgmii_rxreset      (sgmii_rxreset),
-//  
-//  .sgmii_encommaalign (sgmii_encommaalign),
-//  .sgmii_pll_locked   (sgmii_pll_locked),
-//  .sgmii_elecidle     (sgmii_elecidle),
-//
-//  .sgmii_resetdone    (sgmii_resetdone),
-//
-//  .sgmii_loopback     (sgmii_loopback),
-//  .sgmii_powerdown    (sgmii_powerdown),
-//
-//  .mac_rx_clk         (mac_rx_clk),
-//  .mac_rx_data        (mac_rx_data),
-//  .mac_rx_dvld        (mac_rx_dvld),
-//  .mac_rx_goodframe   (mac_rx_goodframe),
-//  .mac_rx_badframe    (mac_rx_badframe),
-//
-//  .mac_tx_clk         (mac_tx_clk),
-//  .mac_tx_data        (mac_tx_data),
-//  .mac_tx_dvld        (mac_tx_dvld),
-//  .mac_tx_ack         (mac_tx_ack)
-//);
-//
-//// fake loopback
-//assign mac_tx_data = mac_rx_data;
-//assign mac_tx_dvld = mac_rx_dvld;
+  
+  /********* SGMII PHY ************/
+  
+  reg sgmii_reset_R;
+  reg sgmii_reset_RR;
+  always @(posedge clk_125) begin
+    sgmii_reset_R  <= sys_rst;
+    sgmii_reset_RR <= sgmii_reset_R;
+  end
+  wire sgmii_reset = sgmii_reset_RR;
+  
+  wire       recclk_125;
+
+  wire [7:0] sgmii_txd;
+  wire       sgmii_txisk;
+  wire       sgmii_txdispmode;
+  wire       sgmii_txdispval;
+  wire [1:0] sgmii_txbufstatus;
+  wire       sgmii_txreset;
+  
+  wire [7:0] sgmii_rxd;
+  wire       sgmii_rxiscomma;
+  wire       sgmii_rxisk;
+  wire       sgmii_rxdisperr;
+  wire       sgmii_rxnotintable;
+  wire       sgmii_rxrundisp;
+  wire [2:0] sgmii_rxclkcorcnt;
+  wire [2:0] sgmii_rxbufstatus;
+  wire       sgmii_rxreset;
+  
+  wire       sgmii_encommaalign;
+  wire       sgmii_pll_locked;
+  wire       sgmii_elecidle;
+  
+  wire       sgmii_resetdone;
+  
+  wire       sgmii_loopback;
+  wire       sgmii_powerdown;
+  
+  sgmii_phy sgmii_phy_inst (
+    .mgt_rx_n           (sgmii_rx_n),
+    .mgt_rx_p           (sgmii_rx_p),
+    .mgt_tx_n           (sgmii_tx_n),
+    .mgt_tx_p           (sgmii_tx_p),
+    .mgt_clk_n          (sgmii_clkref_n),
+    .mgt_clk_p          (sgmii_clkref_p),
+  
+    .mgt_reset          (sgmii_reset),
+  
+    .clk_125            (clk_125),
+    .recclk_125         (recclk_125),
+  
+    .sgmii_txd          (sgmii_txd),
+    .sgmii_txisk        (sgmii_txisk),
+    .sgmii_txdispmode   (sgmii_txdispmode),
+    .sgmii_txdispval    (sgmii_txdispval),
+    .sgmii_txbufstatus  (sgmii_txbufstatus),
+    .sgmii_txreset      (sgmii_txreset),
+  
+    .sgmii_rxd          (sgmii_rxd),
+    .sgmii_rxiscomma    (sgmii_rxiscomma),
+    .sgmii_rxisk        (sgmii_rxisk),
+    .sgmii_rxdisperr    (sgmii_rxdisperr),
+    .sgmii_rxnotintable (sgmii_rxnotintable),
+    .sgmii_rxrundisp    (sgmii_rxrundisp),
+    .sgmii_rxclkcorcnt  (sgmii_rxclkcorcnt),
+    .sgmii_rxbufstatus  (sgmii_rxbufstatus),
+    .sgmii_rxreset      (sgmii_rxreset),
+  
+    .sgmii_encommaalign (sgmii_encommaalign),
+    .sgmii_pll_locked   (sgmii_pll_locked),
+    .sgmii_elecidle     (sgmii_elecidle),
+    .sgmii_resetdone    (sgmii_resetdone),
+  
+    .sgmii_loopback     (1'b0),
+    .sgmii_powerdown    (1'b0)
+  );
+
+  assign v6_gpio[8] = clk_125;
+  assign v6_gpio[11] = recclk_125;
+
+  // MAC interface
+  wire       mac_rx_clk;
+  wire [7:0] mac_rx_data;
+  wire       mac_rx_dvld;
+  wire       mac_rx_goodframe;
+  wire       mac_rx_badframe;
+  
+  wire       mac_tx_clk;
+  wire [7:0] mac_tx_data;
+  wire       mac_tx_dvld;
+  wire       mac_tx_ack;
+
+  temac #(
+    .REG_SGMII (0),
+    .PHY_ADR   (4'b0000)
+  ) temac_inst (
+    .clk_125            (clk_125),
+    .reset              (sgmii_reset),
+    .sgmii_txd          (sgmii_txd),
+    .sgmii_txisk        (sgmii_txisk),
+    .sgmii_txdispmode   (sgmii_txdispmode),
+    .sgmii_txdispval    (sgmii_txdispval),
+    .sgmii_txbuferr     (sgmii_txbufstatus[1]),
+    .sgmii_txreset      (sgmii_txreset),
+  
+    .sgmii_rxd          (sgmii_rxd),
+    .sgmii_rxiscomma    (sgmii_rxiscomma),
+    .sgmii_rxisk        (sgmii_rxisk),
+    .sgmii_rxdisperr    (sgmii_rxdisperr),
+    .sgmii_rxnotintable (sgmii_rxnotintable),
+    .sgmii_rxrundisp    (sgmii_rxrundisp),
+    .sgmii_rxclkcorcnt  (sgmii_rxclkcorcnt),
+    .sgmii_rxbufstatus  (sgmii_rxbufstatus[2]),
+    .sgmii_rxreset      (sgmii_rxreset),
+    
+    .sgmii_encommaalign (sgmii_encommaalign),
+    .sgmii_pll_locked   (sgmii_pll_locked),
+    .sgmii_elecidle     (sgmii_elecidle),
+  
+    .sgmii_resetdone    (sgmii_resetdone),
+  
+    .sgmii_loopback     (sgmii_loopback),
+    .sgmii_powerdown    (sgmii_powerdown),
+  
+    .mac_rx_clk         (mac_rx_clk),
+    .mac_rx_data        (mac_rx_data),
+    .mac_rx_dvld        (mac_rx_dvld),
+    .mac_rx_goodframe   (mac_rx_goodframe),
+    .mac_rx_badframe    (mac_rx_badframe),
+  
+    .mac_tx_clk         (mac_tx_clk),
+    .mac_tx_data        (mac_tx_data),
+    .mac_tx_dvld        (mac_tx_dvld),
+    .mac_tx_ack         (mac_tx_ack),
+    .mac_syncacquired   (mac_syncacquired)
+  );
+
+  assign regin_0 = {3'b0, mac_syncacquired,  1'b0, sgmii_rxclkcorcnt, 3'b0, sgmii_reset, 3'b0, sgmii_pll_locked, 3'b0, sgmii_encommaalign, 3'b0, sgmii_resetdone, 3'b0, sgmii_txbufstatus[1], 3'b0, sgmii_rxbufstatus[2]};
+  //10010100
+
+
+  assign debug_clk = clk_125;
+
+  reg [31:0] foo0;
+  reg [31:0] foo1;
+  reg [31:0] foo2;
+  reg [31:0] foo3;
+  reg [31:0] foo4;
+  reg [31:0] foo5;
+  reg [31:0] foo6;
+
+  reg prev_dvld;
+
+  always @(posedge mac_rx_clk) begin
+    prev_dvld <= mac_rx_dvld;
+
+    if (mac_rx_goodframe)
+      foo0[15:0] <= foo0[15:0] + 1;
+    if (mac_rx_badframe)
+      foo0[31:16] <= foo0[31:16] + 1;
+
+    if (mac_rx_dvld)
+      foo1[15:0] <= foo1[15:0] + 1;
+    if (mac_rx_dvld && !prev_dvld)
+      foo1[15:0] <= 0;
+  end
+
+  always @(posedge clk_125) begin
+      
+    if (sgmii_rxiscomma) 
+      foo3[7:0] <= foo3[7:0] + 1;
+    if (sgmii_rxisk) 
+      foo3[15:8] <= foo3[15:8] + 1;
+    if (!sgmii_rxisk) 
+      foo3[23:16] <= foo3[23:16] + 1;
+    if (sgmii_rxdisperr) 
+      foo3[31:24] <= foo3[31:24] + 1;
+
+    if (sgmii_rxd != 8'b1011_1100) begin
+      if (sgmii_rxisk) 
+        foo4[15:0] <= foo4[15:0] + 1;
+    end
+
+    if (sgmii_rxisk) 
+      foo4[31:24] <= sgmii_rxd;
+
+    if (!sgmii_rxisk) 
+      foo4[23:16] <= sgmii_rxd;
+
+    if (sgmii_rxclkcorcnt == 3'b001  ||
+        sgmii_rxclkcorcnt == 3'b010  ||
+        sgmii_rxclkcorcnt == 3'b011  ||
+        sgmii_rxclkcorcnt == 3'b100) 
+      foo5[15:0] <= foo5[15:0] + 1;
+
+    if (sgmii_rxclkcorcnt == 3'b111 || sgmii_rxclkcorcnt == 3'b110) 
+      foo5[31:16] <= foo5[31:16] + 1;
+
+    if (sgmii_rxbufstatus[2]) 
+      foo6 <= foo6 + 1;
+  end
+
+  assign regin_1 = foo0;
+  assign regin_2 = foo1;
+  assign regin_3 = foo2;
+  assign regin_4 = foo3;
+  assign regin_5 = foo4;
+  assign regin_6 = foo5;
+  assign regin_7 = foo6;
+
+  /*
+  wire [31:0] regout_0;
+  wire [31:0] regout_1;
+  wire [31:0] regout_2;
+  wire [31:0] regout_3;
+  wire [31:0] regout_4;
+  wire [31:0] regout_5;
+  wire [31:0] regout_6;
+  wire [31:0] regout_7;
+  */
+
+  reg [26:0] tx_counter;
+  reg [1:0] state;
+  always @(posedge mac_tx_clk) begin
+    tx_counter <= tx_counter + 1;
+    if (sgmii_reset) begin
+      state <= 0;
+      tx_counter <= 0;
+    end else begin
+      case (state) 
+        0: begin
+          if (mac_tx_ack) begin
+            state <= 1;
+          end else begin
+            tx_counter <= 0;
+          end
+        end
+        1: begin
+          if (tx_counter == 27'd256) begin
+            state <= 2;
+          end
+        end
+        2: begin
+          if (tx_counter == {27{1'b1}}) begin
+            state <= 0;
+          end
+        end
+        default: begin
+          state <= 2;
+        end
+      endcase
+    end
+  end
+
+  assign mac_tx_dvld = state == 0 || state == 1;
+  assign mac_tx_data = tx_counter[7:0];
 
 endmodule

@@ -25,8 +25,6 @@ module pwm_sm(
       case (state)
         IDLE: begin
           //IDLE is default state
-          if (prev_selected == 1'b0 && selected == 1'b1)
-            state <= UP;
         end
         UP: begin
           if (tick) begin
@@ -46,6 +44,10 @@ module pwm_sm(
           state <= IDLE;
         end
       endcase
+    end
+    if (prev_selected == 1'b0 && selected == 1'b1) begin
+      state <= UP;
+      pwm_val_reg <= 5'b0;
     end
   end
 

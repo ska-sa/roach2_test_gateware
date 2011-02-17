@@ -13,7 +13,9 @@ module epb_infrastructure(
   input  per_clk;
   output epb_clk;
 
-  IOBUF iobuf_data [0:31](
+  IOBUF #(
+    .IOSTANDARD("DEFAULT")
+  ) iobuf_data [0:31] (
     .O  (epb_data_out),
     .IO (epb_data_buf),
     .I  (epb_data_in),

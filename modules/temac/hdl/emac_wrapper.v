@@ -1,11 +1,11 @@
 //-----------------------------------------------------------------------------
 // Title      : Virtex-6 Embedded Tri-Mode Ethernet MAC Wrapper
 // Project    : Virtex-6 Embedded Tri-Mode Ethernet MAC Wrapper
-// File       : v6_emac_v1_3.v
-// Version    : 1.3
+// File       : emac_wrapper.v
+// Version    : 1.4
 //-----------------------------------------------------------------------------
 //
-// (c) Copyright 2009 Xilinx, Inc. All rights reserved.
+// (c) Copyright 2009-2010 Xilinx, Inc. All rights reserved.
 //
 // This file contains confidential and proprietary information
 // of Xilinx, Inc. and is protected under U.S. and
@@ -79,8 +79,8 @@
 // Module declaration for the primitive-level wrapper
 //------------------------------------------------------------------------------
 
-(* X_CORE_INFO = "v6_emac_v1_3, Coregen 11.3" *)
-(* CORE_GENERATION_INFO = "v6_emac_v1_3,v6_emac_v1_3,{c_has_mii=false,c_has_gmii=false,c_has_rgmii_v1_3=false,c_has_rgmii_v2_0=false,c_has_sgmii=true,c_has_gpcs=false,c_tri_speed=true,c_speed_10=false,c_speed_100=false,c_speed_1000=false,c_has_host=false,c_has_dcr=false,c_has_mdio=false,c_client_16=false,c_add_filter=false,c_has_clock_enable=false,c_serial_mode_switch_en=false,c_overclocking_rate_2000mbps=false,c_overclocking_rate_2500mbps=false,}" *)
+(* X_CORE_INFO = "v6_emac_v1_4, Coregen 12.1" *)
+(* CORE_GENERATION_INFO = "emac_wrapper,v6_emac_v1_4,{c_has_mii=false,c_has_gmii=false,c_has_rgmii_v1_3=false,c_has_rgmii_v2_0=false,c_has_sgmii=true,c_has_gpcs=false,c_tri_speed=true,c_speed_10=false,c_speed_100=false,c_speed_1000=false,c_has_host=false,c_has_dcr=false,c_has_mdio=false,c_client_16=false,c_add_filter=false,c_has_clock_enable=false,c_serial_mode_switch_en=false,c_overclocking_rate_2000mbps=false,c_overclocking_rate_2500mbps=false,}" *)
 module emac_wrapper
 (
 
@@ -246,7 +246,7 @@ module emac_wrapper
     // PCS/PMA reset is not asserted
        .EMAC_PHYRESET                      ("FALSE"),
     // PCS/PMA Auto-Negotiation is not enabled
-       .EMAC_PHYINITAUTONEG_ENABLE         ("FALSE"),
+       .EMAC_PHYINITAUTONEG_ENABLE         ("TRUE"),
     // PCS/PMA isolate is not enabled
        .EMAC_PHYISOLATE                    ("FALSE"),
     // PCS/PMA is not held in powerdown mode

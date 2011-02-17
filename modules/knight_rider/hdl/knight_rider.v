@@ -1,7 +1,8 @@
 module knight_rider(
     input        clk,
     input        rst,
-    output [7:0] led
+    output [7:0] led,
+    input  [2:0] rate
   );
 
   // Set this value to 8 to make it more simulateable
@@ -33,16 +34,28 @@ module knight_rider(
   end endgenerate
 
   reg [23-2*SIM:0] global_tick_counter;
+  reg [23-2*SIM:0] global_tick_counter_prev;
+
   always @(posedge clk) begin
+    global_tick_counter_prev <= global_tick_counter;
     if (rst) begin
-      global_tick_counter <= 21'b0;
+      global_tick_counter <= {24{1'b1}};
     end else begin
-      global_tick_counter <= global_tick_counter + 21'b1;
+      case (rate)
+        3'd0: global_tick_counter <= global_tick_counter + 24'd1;
+        3'd1: global_tick_counter <= global_tick_counter + 24'd2;
+        3'd2: global_tick_counter <= global_tick_counter + 24'd3;
+        3'd3: global_tick_counter <= global_tick_counter + 24'd4;
+        3'd4: global_tick_counter <= global_tick_counter + 24'd5;
+        3'd5: global_tick_counter <= global_tick_counter + 24'd6;
+        3'd6: global_tick_counter <= global_tick_counter + 24'd7;
+        3'd7: global_tick_counter <= global_tick_counter + 24'd8;
+      endcase
     end
   end
 
-  wire global_pwm_tick = global_tick_counter[18-2*SIM:0] == 19'b0;
-  wire global_tick = global_tick_counter == 24'b0;
+  wire global_pwm_tick = global_tick_counter[19-2*SIM:0] < global_tick_counter_prev[19-2*SIM:0];
+  wire global_tick = global_tick_counter < global_tick_counter_prev;
 
   reg [2:0] led_index;
   reg dir;
@@ -55,11 +68,11 @@ module knight_rider(
       if (global_tick) begin
         if (dir) begin
           led_index <= led_index + 3'b1;
-          if (led_index == NUM_LED - 2)
+          if (led_index == 3'd6)
             dir <= ~dir;
         end else begin
           led_index <= led_index - 3'b1;
-          if (led_index == 1)
+          if (led_index == 3'd1)
             dir <= ~dir;
         end
       end
