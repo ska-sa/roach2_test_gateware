@@ -21,11 +21,14 @@ SRC=./modules/toplevel/hdl/toplevel.v \
 		./modules/knight_rider/hdl/pwm_sm.v \
 		./modules/epb_infrastructure/hdl/epb_infrastructure.v \
 		./modules/epb_wb_bridge_reg/hdl/epb_wb_bridge_reg.v \
+		./modules/wbs_arbiter/hdl/timeout.v \
+		./modules/wbs_arbiter/hdl/wbs_arbiter.v \
 		./modules/sgmii_phy/hdl/sgmii_phy.v \
 		./modules/sgmii_phy/hdl/sgmii_gtx.v \
 		./modules/temac/hdl/emac_wrapper.v \
 		./modules/temac/hdl/temac.v \
-		./modules/wb_debug/hdl/wb_debug.v
+		./modules/gpio_controller/hdl/gpio_controller.v \
+		./modules/sys_block/hdl/sys_block.v
 
 # Module name of toplevel entity
 TOPLEVEL_MODULE=toplevel

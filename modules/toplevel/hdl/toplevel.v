@@ -1,3 +1,4 @@
+`include "mem_layout.v"
 module toplevel(
     input          sys_clk_n,
     input          sys_clk_p,
@@ -80,20 +81,19 @@ module toplevel(
     output  [35:0] qdr3_d,
     output         qdr3_doffn,
     input   [35:0] qdr3_q,
+    */
 
-    input          zdok0_clk0_n,
-    input          zdok0_clk0_p,
-    input          zdok0_clk1_n,
-    input          zdok0_clk1_p,
+    inout    [1:0] zdok0_clk_n,
+    inout    [1:0] zdok0_clk_p,
     inout   [37:0] zdok0_dp_n,
     inout   [37:0] zdok0_dp_p,
 
-    inout          zdok1_clk0_n,
-    inout          zdok1_clk0_p,
-    inout          zdok1_clk1_n,
-    inout          zdok1_clk1_p,
+    inout    [1:0] zdok1_clk_n,
+    inout    [1:0] zdok1_clk_p,
     inout   [37:0] zdok1_dp_n,
     inout   [37:0] zdok1_dp_p,
+
+    /*
 
     inout   [11:0] mgt_gpio,
     output  [31:0] mgt_tx_n,
@@ -163,13 +163,17 @@ module toplevel(
     .rate (knight_rider_speed)
   );
 
-  wire wb_clk_i, wb_rst_i;
-  wire wb_cyc_o, wb_stb_o, wb_we_o;
-  wire  [3:0] wb_sel_o;
-  wire [31:0] wb_adr_o;
-  wire [31:0] wb_dat_o;
-  wire [31:0] wb_dat_i;
-  wire wb_ack_i, wb_err_i;
+  wire        wb_clk_i;
+  wire        wb_rst_i;
+  wire        wbm_cyc_o;
+  wire        wbm_stb_o;
+  wire        wbm_we_o;
+  wire  [3:0] wbm_sel_o;
+  wire [31:0] wbm_adr_o;
+  wire [31:0] wbm_dat_o;
+  wire [31:0] wbm_dat_i;
+  wire        wbm_ack_i;
+  wire        wbm_err_i;
 
   assign wb_clk_i = sys_clk;
   assign wb_rst_i = sys_rst;
@@ -188,18 +192,25 @@ module toplevel(
     .epb_clk       (epb_clk)
   );
 
+  OBUF #(
+    .IOSTANDARD("LVCMOS25")
+  ) OBUF_ppc_irqn (
+    .O (ppc_irqn),
+    .I (1'b0)
+  );
+
   epb_wb_bridge_reg epb_wb_bridge_reg_inst(
     .wb_clk_i (wb_clk_i),
     .wb_rst_i (wb_rst_i),
-    .wb_cyc_o (wb_cyc_o),
-    .wb_stb_o (wb_stb_o),
-    .wb_we_o  (wb_we_o),
-    .wb_sel_o (wb_sel_o),
-    .wb_adr_o (wb_adr_o),
-    .wb_dat_o (wb_dat_o),
-    .wb_dat_i (wb_dat_i),
-    .wb_ack_i (wb_ack_i),
-    .wb_err_i (wb_err_i),
+    .wb_cyc_o (wbm_cyc_o),
+    .wb_stb_o (wbm_stb_o),
+    .wb_we_o  (wbm_we_o),
+    .wb_sel_o (wbm_sel_o),
+    .wb_adr_o (wbm_adr_o),
+    .wb_dat_o (wbm_dat_o),
+    .wb_dat_i (wbm_dat_i),
+    .wb_ack_i (wbm_ack_i),
+    .wb_err_i (wbm_err_i),
 
     .epb_clk       (epb_clk),
     .epb_cs_n      (ppc_pcsn[0]),
@@ -213,148 +224,272 @@ module toplevel(
     .epb_rdy       (ppc_prdy),
     .epb_doen      (ppc_doen)
   );
+
+  localparam NUM_SLAVES    = 24;
+
+  localparam DRAM_SLI      = 23;
+  localparam QDR3_SLI      = 22;
+  localparam QDR2_SLI      = 21;
+  localparam QDR1_SLI      = 20;
+  localparam QDR0_SLI      = 19;
+  localparam APP_SLI       = 18;
+  localparam GBE_SLI       = 17;
+  localparam TGE7_SLI      = 16;
+  localparam TGE6_SLI      = 15;
+  localparam TGE5_SLI      = 14;
+  localparam TGE4_SLI      = 13;
+  localparam TGE3_SLI      = 12;
+  localparam TGE2_SLI      = 11;
+  localparam TGE1_SLI      = 10;
+  localparam TGE0_SLI      =  9;
+  localparam ZDOK1_SLI     =  8;
+  localparam ZDOK0_SLI     =  7;
+  localparam DRAMCONF_SLI  =  6;
+  localparam QDR3CONF_SLI  =  5;
+  localparam QDR2CONF_SLI  =  4;
+  localparam QDR1CONF_SLI  =  3;
+  localparam QDR0CONF_SLI  =  2;
+  localparam GPIO_SLI      =  1;
+  localparam SYSBLOCK_SLI  =  0;
+
+  localparam SLAVE_BASE = {
+    `DRAM_A_BASE,
+    `QDR3_A_BASE,
+    `QDR2_A_BASE,
+    `QDR1_A_BASE,
+    `QDR0_A_BASE,
+    `APP_A_BASE,
+    `GBE_A_BASE,
+    `TGE7_A_BASE,
+    `TGE6_A_BASE,
+    `TGE5_A_BASE,
+    `TGE4_A_BASE,
+    `TGE3_A_BASE,
+    `TGE2_A_BASE,
+    `TGE1_A_BASE,
+    `TGE0_A_BASE,
+    `ZDOK1_A_BASE,
+    `ZDOK0_A_BASE,
+    `DRAMCONF_A_BASE,
+    `QDR3CONF_A_BASE,
+    `QDR2CONF_A_BASE,
+    `QDR1CONF_A_BASE,
+    `QDR0CONF_A_BASE,
+    `GPIO_A_BASE,
+    `SYSBLOCK_A_BASE
+  };
+
+  localparam SLAVE_HIGH = {
+    `DRAM_A_HIGH,
+    `QDR3_A_HIGH,
+    `QDR2_A_HIGH,
+    `QDR1_A_HIGH,
+    `QDR0_A_HIGH,
+    `APP_A_HIGH,
+    `GBE_A_HIGH,
+    `TGE7_A_HIGH,
+    `TGE6_A_HIGH,
+    `TGE5_A_HIGH,
+    `TGE4_A_HIGH,
+    `TGE3_A_HIGH,
+    `TGE2_A_HIGH,
+    `TGE1_A_HIGH,
+    `TGE0_A_HIGH,
+    `ZDOK1_A_HIGH,
+    `ZDOK0_A_HIGH,
+    `DRAMCONF_A_HIGH,
+    `QDR3CONF_A_HIGH,
+    `QDR2CONF_A_HIGH,
+    `QDR1CONF_A_HIGH,
+    `QDR0CONF_A_HIGH,
+    `GPIO_A_HIGH,
+    `SYSBLOCK_A_HIGH
+  };
+
+  wire    [NUM_SLAVES - 1:0] wbs_cyc_o;
+  wire    [NUM_SLAVES - 1:0] wbs_stb_o;
+  wire                       wbs_we_o;
+  wire                 [3:0] wbs_sel_o;
+  wire                [31:0] wbs_adr_o;
+  wire                [31:0] wbs_dat_o;
+  wire [32*NUM_SLAVES - 1:0] wbs_dat_i;
+  wire    [NUM_SLAVES - 1:0] wbs_ack_i;
+  wire    [NUM_SLAVES - 1:0] wbs_err_i;
+
+  wbs_arbiter #(
+    .NUM_SLAVES (NUM_SLAVES),
+    .SLAVE_ADDR (SLAVE_BASE),
+    .SLAVE_HIGH (SLAVE_HIGH),
+    .TIMEOUT    (1024)
+  ) wbs_arbiter_inst (
+    .wb_clk_i  (wb_clk_i),
+    .wb_rst_i  (wb_rst_i),
+
+    .wbm_cyc_i (wbm_cyc_o),
+    .wbm_stb_i (wbm_stb_o),
+    .wbm_we_i  (wbm_we_o),
+    .wbm_sel_i (wbm_sel_o),
+    .wbm_adr_i (wbm_adr_o),
+    .wbm_dat_i (wbm_dat_o),
+    .wbm_dat_o (wbm_dat_i),
+    .wbm_ack_o (wbm_ack_i),
+    .wbm_err_o (wbm_err_i),
+
+    .wbs_cyc_o (wbs_cyc_o),
+    .wbs_stb_o (wbs_stb_o),
+    .wbs_we_o  (wbs_we_o),
+    .wbs_sel_o (wbs_sel_o),
+    .wbs_adr_o (wbs_adr_o),
+    .wbs_dat_o (wbs_dat_o),
+    .wbs_dat_i (wbs_dat_i),
+    .wbs_ack_i (wbs_ack_i)
+  );
+
   wire        debug_clk;
-  wire [31:0] regin_0;
-  wire [31:0] regin_1;
-  wire [31:0] regin_2;
-  wire [31:0] regin_3;
-  wire [31:0] regin_4;
-  wire [31:0] regin_5;
-  wire [31:0] regin_6;
-  wire [31:0] regin_7;
+  wire [31:0] debug_regin_0;
+  wire [31:0] debug_regin_1;
+  wire [31:0] debug_regin_2;
+  wire [31:0] debug_regin_3;
+  wire [31:0] debug_regin_4;
+  wire [31:0] debug_regin_5;
+  wire [31:0] debug_regin_6;
+  wire [31:0] debug_regin_7;
+  wire [31:0] debug_regout_0;
+  wire [31:0] debug_regout_1;
+  wire [31:0] debug_regout_2;
+  wire [31:0] debug_regout_3;
+  wire [31:0] debug_regout_4;
+  wire [31:0] debug_regout_5;
+  wire [31:0] debug_regout_6;
+  wire [31:0] debug_regout_7;
 
-  wire [31:0] regout_0;
-  wire [31:0] regout_1;
-  wire [31:0] regout_2;
-  wire [31:0] regout_3;
-  wire [31:0] regout_4;
-  wire [31:0] regout_5;
-  wire [31:0] regout_6;
-  wire [31:0] regout_7;
-
-  wb_debug wb_debug_inst(
+  sys_block sys_block_inst(
     .wb_clk_i (wb_clk_i),
     .wb_rst_i (wb_rst_i),
-    .wb_cyc_i (wb_cyc_o),
-    .wb_stb_i (wb_stb_o),
-    .wb_we_i  (wb_we_o),
-    .wb_sel_i (wb_sel_o),
-    .wb_adr_i (wb_adr_o),
-    .wb_dat_i (wb_dat_o),
-    .wb_dat_o (wb_dat_i),
-    .wb_ack_o (wb_ack_i),
-    .wb_err_o (wb_err_i),
+    .wb_cyc_i (wbs_cyc_o[SYSBLOCK_SLI]),
+    .wb_stb_i (wbs_stb_o[SYSBLOCK_SLI]),
+    .wb_we_i  (wbs_we_o),
+    .wb_sel_i (wbs_sel_o),
+    .wb_adr_i (wbs_adr_o),
+    .wb_dat_i (wbs_dat_o),
+    .wb_dat_o (wbs_dat_i[(SYSBLOCK_SLI+1)*32-1:(SYSBLOCK_SLI)*32]),
+    .wb_ack_o (wbs_ack_i[SYSBLOCK_SLI]),
+    .wb_err_o (wbs_err_i[SYSBLOCK_SLI]),
 
-    .debug_clk(debug_clk),
-    .regin_0(regin_0),
-    .regin_1(regin_1),
-    .regin_2(regin_2),
-    .regin_3(regin_3),
-    .regin_4(regin_4),
-    .regin_5(regin_5),
-    .regin_6(regin_6),
-    .regin_7(regin_7),
-
-    .regout_0(regout_0),
-    .regout_1(regout_1),
-    .regout_2(regout_2),
-    .regout_3(regout_3),
-    .regout_4(regout_4),
-    .regout_5(regout_5),
-    .regout_6(regout_6),
-    .regout_7(regout_7),
-
-    .fifo_wr_in(fifo_wr_in),
-    .fifo_wr_en(fifo_wr_en)
+    .debug_clk (debug_clk),
+    .regin_0   (debug_regin_0),
+    .regin_1   (debug_regin_1),
+    .regin_2   (debug_regin_2),
+    .regin_3   (debug_regin_3),
+    .regin_4   (debug_regin_4),
+    .regin_5   (debug_regin_5),
+    .regin_6   (debug_regin_6),
+    .regin_7   (debug_regin_7),
+    .regout_0  (debug_regout_0),
+    .regout_1  (debug_regout_1),
+    .regout_2  (debug_regout_2),
+    .regout_3  (debug_regout_3),
+    .regout_4  (debug_regout_4),
+    .regout_5  (debug_regout_5),
+    .regout_6  (debug_regout_6),
+    .regout_7  (debug_regout_7)
   );
 
-  /*
+  /**** ZDOK 0 ****/
 
-  reg [31:0] scratch0;
-  reg [31:0] scratch1;
-  reg [31:0] misc0;
-  reg [31:0] misc1;
-  reg [31:0] misc2;
-  reg [31:0] misc3;
-  reg [31:0] misc4;
-  reg [31:0] misc5;
+  wire [79:0] zdok0_out;
+  wire [79:0] zdok0_in;
+  wire [79:0] zdok0_oe;
+  wire [79:0] zdok0_ded;
 
-  reg wb_ack_i_reg;
-  assign wb_ack_i = wb_ack_i_reg;
+  gpio_controller #(
+    .COUNT(80)
+  ) gpio_zdok0 (
+    .wb_clk_i (wb_clk_i),
+    .wb_rst_i (wb_rst_i),
+    .wb_cyc_i (wbs_cyc_o[ZDOK0_SLI]),
+    .wb_stb_i (wbs_stb_o[ZDOK0_SLI]),
+    .wb_we_i  (wbs_we_o),
+    .wb_sel_i (wbs_sel_o),
+    .wb_adr_i (wbs_adr_o),
+    .wb_dat_i (wbs_dat_o),
+    .wb_dat_o (wbs_dat_i[(ZDOK0_SLI+1)*32-1:(ZDOK0_SLI)*32]),
+    .wb_ack_o (wbs_ack_i[ZDOK0_SLI]),
+    .wb_err_o (wbs_err_i[ZDOK0_SLI]),
 
-  assign knight_rider_speed = scratch1[2:0];
+    .gpio_out (zdok0_out),
+    .gpio_in  (zdok0_in),
+    .gpio_oe  (zdok0_oe),
+    .gpio_ded (zdok0_ded)
+  );
 
-  reg [31:0] debug;
-
-  always @(posedge clk_125) begin
-    misc0 <= debug;
-  end
-
-  reg [31:0] misc0_R;
-  reg [31:0] misc0_RR;
-
-  always @(posedge wb_clk_i) begin
-    misc0_R  <= misc0;
-    misc0_RR <= misc0_R;
-
-    wb_ack_i_reg <= 1'b0;
-    if (wb_rst_i) begin
-      scratch0 <= 32'hdeadbeef;
-      scratch1 <= 32'h1;
-      misc1    <= 32'b0;
-    end else begin
-      if (wb_stb_o && wb_cyc_o) begin
-        wb_ack_i_reg <= 1'b1;
-
-        if (wb_we_o) begin
-          case (wb_adr_o[4:2])
-            2'b00: begin
-              scratch0 <= wb_dat_o;
-            end
-            2'b01: begin
-              scratch1 <= wb_dat_o;
-            end
-            2'b10: begin
-            end
-            2'b11: begin
-            end
-          endcase
-        end
-
-        if (wb_we_o) begin
-          misc1[15:0] <= misc1[15:0] + 16'b1;
-        end else begin
-          misc1[31:16] <= misc1[31:16] + 16'b1;
-        end
-      end
-    end
-  end
-
-  assign wb_err_i = 1'b0;
-
-  reg [31:0] wb_dat_i_reg;
-  assign wb_dat_i = wb_dat_i_reg;
-
-  always @(*) begin
-    case (wb_adr_o[4:2])
-      3'd0:    wb_dat_i_reg <= scratch0;
-      3'd1:    wb_dat_i_reg <= scratch1;
-      3'd2:    wb_dat_i_reg <= misc0_RR;
-      3'd3:    wb_dat_i_reg <= misc1;
-      3'd4:    wb_dat_i_reg <= misc2;
-      3'd5:    wb_dat_i_reg <= misc3;
-      3'd6:    wb_dat_i_reg <= misc4;
-      3'd7:    wb_dat_i_reg <= misc5;
-    endcase
-  end
-  */
-
-  OBUF #(
+  IOBUF #(
     .IOSTANDARD("LVCMOS25")
-  ) OBUF_ppc_irqn (
-    .O (ppc_irqn),
-    .I (1'b0)
+  ) IOBUF_zdok0[79:0] (
+    .IO ({zdok0_clk_p[1], zdok0_dp_p[37:29], zdok0_clk_p[0], zdok0_dp_p[28:0],
+          zdok0_clk_n[1], zdok0_dp_n[37:29], zdok0_clk_n[0], zdok0_dp_n[28:0]}),
+    .I  (zdok0_out),
+    .O  (zdok0_in),
+    .T  (~zdok0_oe)
   );
+
+  PULLUP pullup_zdok0[79:0](
+    .O ({zdok0_clk_p[1], zdok0_dp_p[37:29], zdok0_clk_p[0], zdok0_dp_p[28:0],
+         zdok0_clk_n[1], zdok0_dp_n[37:29], zdok0_clk_n[0], zdok0_dp_n[28:0]})
+  );
+
+  /**** ZDOK 1 ****/
+
+  wire [79:0] zdok1_out;
+  wire [79:0] zdok1_in;
+  wire [79:0] zdok1_oe;
+  wire [79:0] zdok1_ded;
+
+  gpio_controller #(
+    .COUNT(80)
+  ) gpio_zdok1 (
+    .wb_clk_i (wb_clk_i),
+    .wb_rst_i (wb_rst_i),
+    .wb_cyc_i (wbs_cyc_o[ZDOK1_SLI]),
+    .wb_stb_i (wbs_stb_o[ZDOK1_SLI]),
+    .wb_we_i  (wbs_we_o),
+    .wb_sel_i (wbs_sel_o),
+    .wb_adr_i (wbs_adr_o),
+    .wb_dat_i (wbs_dat_o),
+    .wb_dat_o (wbs_dat_i[(ZDOK1_SLI+1)*32-1:(ZDOK1_SLI)*32]),
+    .wb_ack_o (wbs_ack_i[ZDOK1_SLI]),
+    .wb_err_o (wbs_err_i[ZDOK1_SLI]),
+
+    .gpio_out (zdok1_out),
+    .gpio_in  (zdok1_in),
+    .gpio_oe  (zdok1_oe),
+    .gpio_ded (zdok1_ded)
+  );
+
+  IOBUF #(
+    .IOSTANDARD ("LVCMOS25")
+  ) IOBUF_zdok1[79:0] (
+    .IO ({zdok1_clk_p[1], zdok1_dp_p[37:29], zdok1_clk_p[0], zdok1_dp_p[28:0],
+          zdok1_clk_n[1], zdok1_dp_n[37:29], zdok1_clk_n[0], zdok1_dp_n[28:0]}),
+    .I  (zdok1_out),
+    .O  (zdok1_in),
+    .T  (~zdok1_oe)
+  );
+
+  PULLUP pullup_zdok1[79:0](
+    .O ({zdok1_clk_p[1], zdok1_dp_p[37:29], zdok1_clk_p[0], zdok1_dp_p[28:0],
+         zdok1_clk_n[1], zdok1_dp_n[37:29], zdok1_clk_n[0], zdok1_dp_n[28:0]})
+  );
+
+  assign debug_regin_0 = zdok0_out[31:0];
+  assign debug_regin_1 = zdok0_oe[31:0];
+  assign debug_regin_2 = zdok0_ded[31:0];
+  assign debug_regin_3 = zdok1_out[31:0];
+  assign debug_regin_4 = zdok1_oe[31:0];
+  assign debug_regin_5 = zdok1_ded[31:0];
+  assign debug_regin_6 = 32'hdead_beef;
+  assign debug_regin_7 = 32'h0def_aced;
+
   
 //wire aux_clk;
 //IBUFGDS #(
@@ -1313,7 +1448,12 @@ module toplevel(
     .mac_syncacquired   (mac_syncacquired)
   );
 
-  assign regin_0 = {3'b0, mac_syncacquired,  1'b0, sgmii_rxclkcorcnt, 3'b0, sgmii_reset, 3'b0, sgmii_pll_locked, 3'b0, sgmii_encommaalign, 3'b0, sgmii_resetdone, 3'b0, sgmii_txbufstatus[1], 3'b0, sgmii_rxbufstatus[2]};
+  assign mac_tx_data = mac_rx_data;
+  assign mac_tx_dvld = mac_rx_dvld;
+
+  /*
+
+  assign debug_regin_0 = {3'b0, mac_syncacquired,  1'b0, sgmii_rxclkcorcnt, 3'b0, sgmii_reset, 3'b0, sgmii_pll_locked, 3'b0, sgmii_encommaalign, 3'b0, sgmii_resetdone, 3'b0, sgmii_txbufstatus[1], 3'b0, sgmii_rxbufstatus[2]};
   //10010100
 
 
@@ -1378,24 +1518,14 @@ module toplevel(
       foo6 <= foo6 + 1;
   end
 
-  assign regin_1 = foo0;
-  assign regin_2 = foo1;
-  assign regin_3 = foo2;
-  assign regin_4 = foo3;
-  assign regin_5 = foo4;
-  assign regin_6 = foo5;
-  assign regin_7 = foo6;
+  assign debug_regin_1 = foo0;
+  assign debug_regin_2 = foo1;
+  assign debug_regin_3 = foo2;
+  assign debug_regin_4 = foo3;
+  assign debug_regin_5 = foo4;
+  assign debug_regin_6 = foo5;
+  assign debug_regin_7 = foo6;
 
-  /*
-  wire [31:0] regout_0;
-  wire [31:0] regout_1;
-  wire [31:0] regout_2;
-  wire [31:0] regout_3;
-  wire [31:0] regout_4;
-  wire [31:0] regout_5;
-  wire [31:0] regout_6;
-  wire [31:0] regout_7;
-  */
 
   reg [26:0] tx_counter;
   reg [1:0] state;
@@ -1432,5 +1562,7 @@ module toplevel(
 
   assign mac_tx_dvld = state == 0 || state == 1;
   assign mac_tx_data = tx_counter[7:0];
+  */
+
 
 endmodule
