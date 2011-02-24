@@ -45,6 +45,7 @@ module toplevel(
     output         ddr3_odt0,
     output         ddr3_odt1,
     output         ddr3_resetn,
+    */
 
     output         qdr0_k,
     output         qdr0_kn,
@@ -81,7 +82,6 @@ module toplevel(
     output  [35:0] qdr3_d,
     output         qdr3_doffn,
     input   [35:0] qdr3_q,
-    */
 
     inout    [1:0] zdok0_clk_n,
     inout    [1:0] zdok0_clk_p,
@@ -123,36 +123,20 @@ module toplevel(
   // synthesis attribute KEEP of sys_clk is TRUE
   wire sys_clk;
 
-  /***************** system signals *****************/
+  wire sys_rst;
+  wire idelay_rdy;
 
-  wire sys_clk_ds;
-  IBUFGDS #(
-    .IOSTANDARD("LVDS_25"),
-    .DIFF_TERM("TRUE")
-  ) ibufgds_sys_clk (
-    .I (sys_clk_p),
-    .IB(sys_clk_n),
-    .O (sys_clk_ds)
+  infrastructure infrastructure_inst (
+    .sys_clk_buf_n  (sys_clk_n),
+    .sys_clk_buf_p  (sys_clk_p),
+    .sys_clk0       (sys_clk),
+    .sys_clk180     (),
+    .sys_clk270     (),
+    .clk_200        (),
+    .sys_rst        (sys_rst),
+    .idelay_rdy     (idelay_rdy)
   );
 
-  BUFG bufg_sys_clk(
-    .I(sys_clk_ds),
-    .O(sys_clk)
-  );
-  
-  /* reset gen */
-  reg sys_rst;
-  reg [15:0] sys_rst_counter;
-  always @(posedge sys_clk) begin
-    sys_rst_counter <= sys_rst_counter + 16'd1;
-
-    if (sys_rst_counter == {16{1'b1}}) begin
-      sys_rst <= 1'b0;
-      sys_rst_counter <= {16{1'b1}};
-    end else begin
-      sys_rst <= 1'b1;
-    end
-  end
 
   wire [2:0] knight_rider_speed;
 
@@ -395,7 +379,18 @@ module toplevel(
     .regout_7  (debug_regout_7)
   );
 
-  /**** ZDOK 0 ****/
+  assign debug_clk     = sys_clk;
+
+  assign debug_regin_0 = 32'h_DEAD_CAFE;
+  assign debug_regin_1 = 32'h_0B0E_FACE;
+  assign debug_regin_2 = 32'h_BAFF_BABE;
+  assign debug_regin_3 = 32'h_C0DE_B00B;
+  assign debug_regin_4 = 32'h_F00D_D00D;
+  assign debug_regin_5 = 32'h_ACED_DEED;
+  assign debug_regin_6 = 32'h_BAD_FACED;
+  assign debug_regin_7 = 32'h_B00ED_0FF;
+
+  /************************ ZDOK 0 ****************************/
 
   wire [79:0] zdok0_out;
   wire [79:0] zdok0_in;
@@ -438,7 +433,7 @@ module toplevel(
          zdok0_clk_n[1], zdok0_dp_n[37:29], zdok0_clk_n[0], zdok0_dp_n[28:0]})
   );
 
-  /**** ZDOK 1 ****/
+  /************************ ZDOK 1 ****************************/
 
   wire [79:0] zdok1_out;
   wire [79:0] zdok1_in;
@@ -481,15 +476,208 @@ module toplevel(
          zdok1_clk_n[1], zdok1_dp_n[37:29], zdok1_clk_n[0], zdok1_dp_n[28:0]})
   );
 
-  assign debug_regin_0 = zdok0_out[31:0];
-  assign debug_regin_1 = zdok0_oe[31:0];
-  assign debug_regin_2 = zdok0_ded[31:0];
-  assign debug_regin_3 = zdok1_out[31:0];
-  assign debug_regin_4 = zdok1_oe[31:0];
-  assign debug_regin_5 = zdok1_ded[31:0];
-  assign debug_regin_6 = 32'hdead_beef;
-  assign debug_regin_7 = 32'h0def_aced;
+  /************** Common QDR Infrastructure ****************/
 
+  wire qdr_clk0;
+  wire qdr_clk180;
+  wire qdr_clk270;
+
+  wire qdr_pll_lock;
+
+  clk_gen #(
+    .CLK_FREQ (200)
+  ) clk_gen_qdr (
+    .clk_100  (sys_clk),
+    .reset    (sys_rst),
+    .clk0     (qdr_clk0),
+    .clk180   (qdr_clk180),
+    .clk270   (qdr_clk270),
+    .pll_lock (qdr_pll_lock)
+  );
+
+  reg qdr_rstR;
+  reg qdr_rstRR;
+
+  always @(posedge qdr_clk0) begin
+    qdr_rstR  <= sys_rst || !qdr_pll_lock || !idelay_rdy;
+    qdr_rstRR <= qdr_rstR;
+  end
+  wire qdr_rst = qdr_rstRR;
+
+  /************************ QDR 0 ****************************/
+  
+  qdr_controller_softcal #( 
+    .DATA_WIDTH (36),
+    .ADDR_WIDTH (21)
+  ) qdr0_controller_inst (
+    .wb_clk_i    (wb_clk_i),
+    .wb_rst_i    (wb_rst_i),
+    .wb_cyc_i    (wbs_cyc_o[QDR0CONF_SLI]),
+    .wb_stb_i    (wbs_stb_o[QDR0CONF_SLI]),
+    .wb_we_i     (wbs_we_o),
+    .wb_sel_i    (wbs_sel_o),
+    .wb_adr_i    (wbs_adr_o),
+    .wb_dat_i    (wbs_dat_o),
+    .wb_dat_o    (wbs_dat_i[(QDR0CONF_SLI+1)*32-1:(QDR0CONF_SLI)*32]),
+    .wb_ack_o    (wbs_ack_i[QDR0CONF_SLI]),
+    .wb_err_o    (wbs_err_i[QDR0CONF_SLI]),
+
+    .qdr_k       (qdr0_k),
+    .qdr_k_n     (qdr0_kn),
+    .qdr_r_n     (qdr0_rdn),
+    .qdr_w_n     (qdr0_wrn),
+    .qdr_sa      (qdr0_a),
+    .qdr_d       (qdr0_d),
+    .qdr_doff_n  (qdr0_doffn),
+    .qdr_q       (qdr0_q),
+
+    .clk0        (qdr_clk0),
+    .clk180      (qdr_clk180),
+    .clk270      (qdr_clk270),
+    .reset       (qdr_rst),
+
+    .phy_rdy     (),
+    .cal_fail    (),
+
+    .usr_rd_strb (1'b0),
+    .usr_wr_strb (1'b0),
+    .usr_addr    (32'b0),
+    .usr_wr_data (72'b0),
+
+    .usr_rd_data (),
+    .usr_rd_dvld ()
+  );
+
+  /************************ QDR 1 ****************************/
+  
+  qdr_controller_softcal #( 
+    .DATA_WIDTH (36),
+    .ADDR_WIDTH (21)
+  ) qdr1_controller_inst (
+    .wb_clk_i    (wb_clk_i),
+    .wb_rst_i    (wb_rst_i),
+    .wb_cyc_i    (wbs_cyc_o[QDR1CONF_SLI]),
+    .wb_stb_i    (wbs_stb_o[QDR1CONF_SLI]),
+    .wb_we_i     (wbs_we_o),
+    .wb_sel_i    (wbs_sel_o),
+    .wb_adr_i    (wbs_adr_o),
+    .wb_dat_i    (wbs_dat_o),
+    .wb_dat_o    (wbs_dat_i[(QDR1CONF_SLI+1)*32-1:(QDR1CONF_SLI)*32]),
+    .wb_ack_o    (wbs_ack_i[QDR1CONF_SLI]),
+    .wb_err_o    (wbs_err_i[QDR1CONF_SLI]),
+
+    .qdr_k       (qdr1_k),
+    .qdr_k_n     (qdr1_kn),
+    .qdr_r_n     (qdr1_rdn),
+    .qdr_w_n     (qdr1_wrn),
+    .qdr_sa      (qdr1_a),
+    .qdr_d       (qdr1_d),
+    .qdr_doff_n  (qdr1_doffn),
+    .qdr_q       (qdr1_q),
+
+    .clk0        (qdr_clk0),
+    .clk180      (qdr_clk180),
+    .clk270      (qdr_clk270),
+    .reset       (qdr_rst),
+
+    .phy_rdy     (),
+    .cal_fail    (),
+
+    .usr_rd_strb (1'b0),
+    .usr_wr_strb (1'b0),
+    .usr_addr    (32'b0),
+    .usr_wr_data (72'b0),
+
+    .usr_rd_data (),
+    .usr_rd_dvld ()
+  );
+  /************************ QDR 2 ****************************/
+  
+  qdr_controller_softcal #( 
+    .DATA_WIDTH (36),
+    .ADDR_WIDTH (21)
+  ) qdr2_controller_inst (
+    .wb_clk_i    (wb_clk_i),
+    .wb_rst_i    (wb_rst_i),
+    .wb_cyc_i    (wbs_cyc_o[QDR2CONF_SLI]),
+    .wb_stb_i    (wbs_stb_o[QDR2CONF_SLI]),
+    .wb_we_i     (wbs_we_o),
+    .wb_sel_i    (wbs_sel_o),
+    .wb_adr_i    (wbs_adr_o),
+    .wb_dat_i    (wbs_dat_o),
+    .wb_dat_o    (wbs_dat_i[(QDR2CONF_SLI+1)*32-1:(QDR2CONF_SLI)*32]),
+    .wb_ack_o    (wbs_ack_i[QDR2CONF_SLI]),
+    .wb_err_o    (wbs_err_i[QDR2CONF_SLI]),
+
+    .qdr_k       (qdr2_k),
+    .qdr_k_n     (qdr2_kn),
+    .qdr_r_n     (qdr2_rdn),
+    .qdr_w_n     (qdr2_wrn),
+    .qdr_sa      (qdr2_a),
+    .qdr_d       (qdr2_d),
+    .qdr_doff_n  (qdr2_doffn),
+    .qdr_q       (qdr2_q),
+
+    .clk0        (qdr_clk0),
+    .clk180      (qdr_clk180),
+    .clk270      (qdr_clk270),
+    .reset       (qdr_rst),
+
+    .phy_rdy     (),
+    .cal_fail    (),
+
+    .usr_rd_strb (1'b0),
+    .usr_wr_strb (1'b0),
+    .usr_addr    (32'b0),
+    .usr_wr_data (72'b0),
+
+    .usr_rd_data (),
+    .usr_rd_dvld ()
+  );
+
+  /************************ QDR 3 ****************************/
+  
+  qdr_controller_softcal #( 
+    .DATA_WIDTH (36),
+    .ADDR_WIDTH (21)
+  ) qdr3_controller_inst (
+    .wb_clk_i    (wb_clk_i),
+    .wb_rst_i    (wb_rst_i),
+    .wb_cyc_i    (wbs_cyc_o[QDR3CONF_SLI]),
+    .wb_stb_i    (wbs_stb_o[QDR3CONF_SLI]),
+    .wb_we_i     (wbs_we_o),
+    .wb_sel_i    (wbs_sel_o),
+    .wb_adr_i    (wbs_adr_o),
+    .wb_dat_i    (wbs_dat_o),
+    .wb_dat_o    (wbs_dat_i[(QDR3CONF_SLI+1)*32-1:(QDR3CONF_SLI)*32]),
+    .wb_ack_o    (wbs_ack_i[QDR3CONF_SLI]),
+    .wb_err_o    (wbs_err_i[QDR3CONF_SLI]),
+
+    .qdr_k       (qdr3_k),
+    .qdr_k_n     (qdr3_kn),
+    .qdr_r_n     (qdr3_rdn),
+    .qdr_w_n     (qdr3_wrn),
+    .qdr_sa      (qdr3_a),
+    .qdr_d       (qdr3_d),
+    .qdr_doff_n  (qdr3_doffn),
+    .qdr_q       (qdr3_q),
+
+    .clk0        (qdr_clk0),
+    .clk180      (qdr_clk180),
+    .clk270      (qdr_clk270),
+    .reset       (qdr_rst),
+
+    .phy_rdy     (),
+    .cal_fail    (),
+
+    .usr_rd_strb (1'b0),
+    .usr_wr_strb (1'b0),
+    .usr_addr    (32'b0),
+    .usr_wr_data (72'b0),
+
+    .usr_rd_data (),
+    .usr_rd_dvld ()
+  );
   
 //wire aux_clk;
 //IBUFGDS #(
@@ -675,80 +863,6 @@ module toplevel(
 //  .OB (zdok1_dp_n),
 //  .I  (zdok0_dp)
 //);
-//
-///***************** QDRs *****************/
-//
-//wire qdr0_k_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr0_k (
-//  .I (qdr0_k_buf),
-//  .O (qdr0_k)
-//);
-//
-//wire qdr0_kn_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr0_kn (
-//  .I (qdr0_kn_buf),
-//  .O (qdr0_kn)
-//);
-//
-//wire qdr0_rdn_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr0_rdn (
-//  .I (qdr0_rdn_buf),
-//  .O (qdr0_rdn)
-//);
-//
-//wire qdr0_wrn_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr0_wrn (
-//  .I (qdr0_wrn_buf),
-//  .O (qdr0_wrn)
-//);
-//
-//wire [20:0] qdr0_a_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr0_a[20:0] (
-//  .I (qdr0_a_buf),
-//  .O (qdr0_a)
-//);
-//
-//wire [35:0] qdr0_d_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr0_d[35:0] (
-//  .I (qdr0_d_buf),
-//  .O (qdr0_d)
-//);
-//
-//wire qdr0_doffn_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr0_doffn (
-//  .I (qdr0_doffn_buf),
-//  .O (qdr0_doffn)
-//);
-//
-//wire [35:0] qdr0_q_buf;
-//IBUF #(
-//  .IOSTANDARD("HSTL_I_DCI")
-//) IBUF_qdr0_q[35:0] (
-//  .I (qdr0_q),
-//  .O (qdr0_q_buf)
-//);
-//
-//assign qdr0_d_buf     = qdr0_q_buf;
-//assign qdr0_a_buf     = qdr0_q_buf[20:0];
-//assign qdr0_doffn_buf = qdr0_q_buf[0];
-//assign qdr0_wrn_buf   = qdr0_q_buf[0];
-//assign qdr0_rdn_buf   = qdr0_q_buf[0];
-//assign qdr0_k_buf     = qdr0_q_buf[0];
-//assign qdr0_kn_buf    = qdr0_q_buf[0];
 //
 ///* qdr 1 */
 //

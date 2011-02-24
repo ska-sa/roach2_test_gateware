@@ -1,4 +1,3 @@
-`include "sys_block.vh"
 module sys_block(
     input         wb_clk_i,
     input         wb_rst_i,
