@@ -1,4 +1,4 @@
-module qdr_cpu_attach (
+module qdrc_cpu_attach (
     input         wb_clk_i,
     input         wb_rst_i,
     input         wb_cyc_i,

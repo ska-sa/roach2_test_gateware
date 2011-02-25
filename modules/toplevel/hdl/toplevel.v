@@ -505,6 +505,16 @@ module toplevel(
   wire qdr_rst = qdr_rstRR;
 
   /************************ QDR 0 ****************************/
+
+  wire [31:0] qdr0_app_addr;
+  wire        qdr0_app_wr_en;
+  wire [71:0] qdr0_app_wr_data;
+  wire        qdr0_app_rd_en;
+  wire [71:0] qdr0_app_rd_data;
+  wire        qdr0_app_rd_dvld;
+
+  wire        qdr0_phy_rdy;
+  wire        qdr0_cal_fail;
   
   qdr_controller_softcal #( 
     .DATA_WIDTH (36),
@@ -536,19 +546,54 @@ module toplevel(
     .clk270      (qdr_clk270),
     .reset       (qdr_rst),
 
-    .phy_rdy     (),
-    .cal_fail    (),
+    .phy_rdy     (qdr0_phy_rdy),
+    .cal_fail    (qdr0_cal_fail),
 
-    .usr_rd_strb (1'b0),
-    .usr_wr_strb (1'b0),
-    .usr_addr    (32'b0),
-    .usr_wr_data (72'b0),
+    .usr_addr    (qdr0_app_addr),
+    .usr_wr_strb (qdr0_app_wr_en),
+    .usr_wr_data (qdr0_app_wr_data),
+    .usr_rd_strb (qdr0_app_rd_en),
+    .usr_rd_data (qdr0_app_rd_data),
+    .usr_rd_dvld (qdr0_app_rd_dvld)
+  );
 
-    .usr_rd_data (),
-    .usr_rd_dvld ()
+  qdr_cpu_interface qdr0_cpu_interface(
+    .wb_clk_i    (wb_clk_i),
+    .wb_rst_i    (wb_rst_i),
+    .wb_cyc_i    (wbs_cyc_o[QDR0_SLI]),
+    .wb_stb_i    (wbs_stb_o[QDR0_SLI]),
+    .wb_we_i     (wbs_we_o),
+    .wb_sel_i    (wbs_sel_o),
+    .wb_adr_i    (wbs_adr_o),
+    .wb_dat_i    (wbs_dat_o),
+    .wb_dat_o    (wbs_dat_i[(QDR0_SLI+1)*32-1:(QDR0_SLI)*32]),
+    .wb_ack_o    (wbs_ack_i[QDR0_SLI]),
+    .wb_err_o    (wbs_err_i[QDR0_SLI]),
+
+    .qdr_clk     (qdr_clk0),
+    .qdr_rst     (qdr_rst),
+
+    .qdr_addr    (qdr0_app_addr),
+    .qdr_wr_en   (qdr0_app_wr_en),
+    .qdr_wr_data (qdr0_app_wr_data),
+    .qdr_rd_en   (qdr0_app_rd_en),
+    .qdr_rd_data (qdr0_app_rd_data),
+    .qdr_rd_dvld (qdr0_app_rd_dvld),
+    .phy_rdy     (qdr0_phy_rdy),
+    .cal_fail    (qdr0_cal_fail)
   );
 
   /************************ QDR 1 ****************************/
+
+  wire [31:0] qdr1_app_addr;
+  wire        qdr1_app_wr_en;
+  wire [71:0] qdr1_app_wr_data;
+  wire        qdr1_app_rd_en;
+  wire [71:0] qdr1_app_rd_data;
+  wire        qdr1_app_rd_dvld;
+
+  wire        qdr1_phy_rdy;
+  wire        qdr1_cal_fail;
   
   qdr_controller_softcal #( 
     .DATA_WIDTH (36),
@@ -580,18 +625,54 @@ module toplevel(
     .clk270      (qdr_clk270),
     .reset       (qdr_rst),
 
-    .phy_rdy     (),
-    .cal_fail    (),
+    .phy_rdy     (qdr1_phy_rdy),
+    .cal_fail    (qdr1_cal_fail),
 
-    .usr_rd_strb (1'b0),
-    .usr_wr_strb (1'b0),
-    .usr_addr    (32'b0),
-    .usr_wr_data (72'b0),
-
-    .usr_rd_data (),
-    .usr_rd_dvld ()
+    .usr_addr    (qdr1_app_addr),
+    .usr_wr_strb (qdr1_app_wr_en),
+    .usr_wr_data (qdr1_app_wr_data),
+    .usr_rd_strb (qdr1_app_rd_en),
+    .usr_rd_data (qdr1_app_rd_data),
+    .usr_rd_dvld (qdr1_app_rd_dvld)
   );
+
+  qdr_cpu_interface qdr1_cpu_interface(
+    .wb_clk_i    (wb_clk_i),
+    .wb_rst_i    (wb_rst_i),
+    .wb_cyc_i    (wbs_cyc_o[QDR1_SLI]),
+    .wb_stb_i    (wbs_stb_o[QDR1_SLI]),
+    .wb_we_i     (wbs_we_o),
+    .wb_sel_i    (wbs_sel_o),
+    .wb_adr_i    (wbs_adr_o),
+    .wb_dat_i    (wbs_dat_o),
+    .wb_dat_o    (wbs_dat_i[(QDR1_SLI+1)*32-1:(QDR1_SLI)*32]),
+    .wb_ack_o    (wbs_ack_i[QDR1_SLI]),
+    .wb_err_o    (wbs_err_i[QDR1_SLI]),
+
+    .qdr_clk     (qdr_clk0),
+    .qdr_rst     (qdr_rst),
+
+    .qdr_addr    (qdr1_app_addr),
+    .qdr_wr_en   (qdr1_app_wr_en),
+    .qdr_wr_data (qdr1_app_wr_data),
+    .qdr_rd_en   (qdr1_app_rd_en),
+    .qdr_rd_data (qdr1_app_rd_data),
+    .qdr_rd_dvld (qdr1_app_rd_dvld),
+    .phy_rdy     (qdr1_phy_rdy),
+    .cal_fail    (qdr1_cal_fail)
+  );
+
   /************************ QDR 2 ****************************/
+
+  wire [31:0] qdr2_app_addr;
+  wire        qdr2_app_wr_en;
+  wire [71:0] qdr2_app_wr_data;
+  wire        qdr2_app_rd_en;
+  wire [71:0] qdr2_app_rd_data;
+  wire        qdr2_app_rd_dvld;
+
+  wire        qdr2_phy_rdy;
+  wire        qdr2_cal_fail;
   
   qdr_controller_softcal #( 
     .DATA_WIDTH (36),
@@ -623,19 +704,54 @@ module toplevel(
     .clk270      (qdr_clk270),
     .reset       (qdr_rst),
 
-    .phy_rdy     (),
-    .cal_fail    (),
+    .phy_rdy     (qdr2_phy_rdy),
+    .cal_fail    (qdr2_cal_fail),
 
-    .usr_rd_strb (1'b0),
-    .usr_wr_strb (1'b0),
-    .usr_addr    (32'b0),
-    .usr_wr_data (72'b0),
+    .usr_addr    (qdr2_app_addr),
+    .usr_wr_strb (qdr2_app_wr_en),
+    .usr_wr_data (qdr2_app_wr_data),
+    .usr_rd_strb (qdr2_app_rd_en),
+    .usr_rd_data (qdr2_app_rd_data),
+    .usr_rd_dvld (qdr2_app_rd_dvld)
+  );
 
-    .usr_rd_data (),
-    .usr_rd_dvld ()
+  qdr_cpu_interface qdr2_cpu_interface(
+    .wb_clk_i    (wb_clk_i),
+    .wb_rst_i    (wb_rst_i),
+    .wb_cyc_i    (wbs_cyc_o[QDR2_SLI]),
+    .wb_stb_i    (wbs_stb_o[QDR2_SLI]),
+    .wb_we_i     (wbs_we_o),
+    .wb_sel_i    (wbs_sel_o),
+    .wb_adr_i    (wbs_adr_o),
+    .wb_dat_i    (wbs_dat_o),
+    .wb_dat_o    (wbs_dat_i[(QDR2_SLI+1)*32-1:(QDR2_SLI)*32]),
+    .wb_ack_o    (wbs_ack_i[QDR2_SLI]),
+    .wb_err_o    (wbs_err_i[QDR2_SLI]),
+
+    .qdr_clk     (qdr_clk0),
+    .qdr_rst     (qdr_rst),
+
+    .qdr_addr    (qdr2_app_addr),
+    .qdr_wr_en   (qdr2_app_wr_en),
+    .qdr_wr_data (qdr2_app_wr_data),
+    .qdr_rd_en   (qdr2_app_rd_en),
+    .qdr_rd_data (qdr2_app_rd_data),
+    .qdr_rd_dvld (qdr2_app_rd_dvld),
+    .phy_rdy     (qdr2_phy_rdy),
+    .cal_fail    (qdr2_cal_fail)
   );
 
   /************************ QDR 3 ****************************/
+
+  wire [31:0] qdr3_app_addr;
+  wire        qdr3_app_wr_en;
+  wire [71:0] qdr3_app_wr_data;
+  wire        qdr3_app_rd_en;
+  wire [71:0] qdr3_app_rd_data;
+  wire        qdr3_app_rd_dvld;
+
+  wire        qdr3_phy_rdy;
+  wire        qdr3_cal_fail;
   
   qdr_controller_softcal #( 
     .DATA_WIDTH (36),
@@ -667,16 +783,41 @@ module toplevel(
     .clk270      (qdr_clk270),
     .reset       (qdr_rst),
 
-    .phy_rdy     (),
-    .cal_fail    (),
+    .phy_rdy     (qdr3_phy_rdy),
+    .cal_fail    (qdr3_cal_fail),
 
-    .usr_rd_strb (1'b0),
-    .usr_wr_strb (1'b0),
-    .usr_addr    (32'b0),
-    .usr_wr_data (72'b0),
+    .usr_addr    (qdr3_app_addr),
+    .usr_wr_strb (qdr3_app_wr_en),
+    .usr_wr_data (qdr3_app_wr_data),
+    .usr_rd_strb (qdr3_app_rd_en),
+    .usr_rd_data (qdr3_app_rd_data),
+    .usr_rd_dvld (qdr3_app_rd_dvld)
+  );
 
-    .usr_rd_data (),
-    .usr_rd_dvld ()
+  qdr_cpu_interface qdr3_cpu_interface(
+    .wb_clk_i    (wb_clk_i),
+    .wb_rst_i    (wb_rst_i),
+    .wb_cyc_i    (wbs_cyc_o[QDR3_SLI]),
+    .wb_stb_i    (wbs_stb_o[QDR3_SLI]),
+    .wb_we_i     (wbs_we_o),
+    .wb_sel_i    (wbs_sel_o),
+    .wb_adr_i    (wbs_adr_o),
+    .wb_dat_i    (wbs_dat_o),
+    .wb_dat_o    (wbs_dat_i[(QDR3_SLI+1)*32-1:(QDR3_SLI)*32]),
+    .wb_ack_o    (wbs_ack_i[QDR3_SLI]),
+    .wb_err_o    (wbs_err_i[QDR3_SLI]),
+
+    .qdr_clk     (qdr_clk0),
+    .qdr_rst     (qdr_rst),
+
+    .qdr_addr    (qdr3_app_addr),
+    .qdr_wr_en   (qdr3_app_wr_en),
+    .qdr_wr_data (qdr3_app_wr_data),
+    .qdr_rd_en   (qdr3_app_rd_en),
+    .qdr_rd_data (qdr3_app_rd_data),
+    .qdr_rd_dvld (qdr3_app_rd_dvld),
+    .phy_rdy     (qdr3_phy_rdy),
+    .cal_fail    (qdr3_cal_fail)
   );
   
 //wire aux_clk;

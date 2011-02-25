@@ -98,7 +98,7 @@ module qdr_controller_softcal (
   /* has the value stayed valid after being sampled 32 times */
   wire         data_valid;
 
-  qdr_cpu_attach cpu_attach_inst (
+  qdrc_cpu_attach cpu_attach_inst (
     .wb_clk_i      (wb_clk_i),
     .wb_rst_i      (wb_rst_i),
     .wb_cyc_i      (wb_cyc_i),

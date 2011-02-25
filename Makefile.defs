@@ -37,7 +37,8 @@ SRC=./modules/toplevel/hdl/toplevel.v \
 		./modules/qdr_controller_softcal/hdl/qdr_controller_softcal.v \
 		./modules/qdr_controller_softcal/hdl/qdrc_phy.v \
 		./modules/qdr_controller_softcal/hdl/qdrc_phy_align.v \
-		./modules/qdr_controller_softcal/hdl/qdr_cpu_attach.v
+		./modules/qdr_controller_softcal/hdl/qdrc_cpu_attach.v \
+		./modules/qdr_cpu_interface/hdl/qdr_cpu_interface.v
 
 # Module name of toplevel entity
 TOPLEVEL_MODULE=toplevel
