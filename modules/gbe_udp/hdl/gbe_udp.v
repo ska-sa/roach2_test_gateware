@@ -1,6 +1,6 @@
 module gbe_udp #(
   /* Enable the application interface at startup */
-    parameter APP_ENABLE = 0,
+    parameter LOCAL_ENABLE = 0,
   /* Default local MAC */
     parameter LOCAL_MAC = 0,
   /* Default local IP */
@@ -108,15 +108,14 @@ module gbe_udp #(
   wire        cpurx_cpu_packet_ready;
   wire        cpurx_cpu_packet_ack;
 
-  gbe_wb_attach (
-    .APP_ENABLE     (APP_ENABLE),
+  gbe_cpu_attach (
+    .APP_ENABLE     (LOCAL_ENABLE),
     .LOCAL_MAC      (LOCAL_MAC),
     .LOCAL_IP       (LOCAL_IP),
     .LOCAL_PORT     (LOCAL_PORT),
     .LOCAL_GATEWAY  (LOCAL_GATEWAY),
-    .PHY_CONFIG     (PHY_CONFIG),
-    .ARP_CACHE_INIT (ARP_CACHE_INIT)
-  gbe_wb_attach_inst (
+    .PHY_CONFIG     (PHY_CONFIG)
+  gbe_cpu_attach_inst (
     .wb_clk_i (wb_clk_i),
     .wb_rst_i (wb_rst_i),
     .wb_stb_i (wb_stb_i),
@@ -136,26 +135,26 @@ module gbe_udp #(
     .local_gateway (local_gateway),
 
   /* ARP cache CPU signals */
-    .arp_cache_index   (arp_cpu_cache_index),
+    .arp_cache_addr    (arp_cpu_cache_index),
     .arp_cache_rd_data (arp_cpu_cache_rd_data),
     .arp_cache_wr_data (arp_cpu_cache_wr_data),
     .arp_cache_wr_en   (arp_cpu_cache_wr_en),
 
   /* CPU RX signals */
-    .cpu_rx_addr         (cpurx_cpu_addr),
-    .cpu_rx_rd_data      (cpurx_cpu_rd_data),
-    .cpu_rx_size         (cpurx_cpu_size),
-    .cpu_rx_packet_ready (cpurx_cpu_packet_ready),
-    .cpu_rx_packet_ack   (cpurx_cpu_packet_ack),
+    .cpu_rx_buffer_addr    (cpurx_cpu_addr),
+    .cpu_rx_buffer_rd_data (cpurx_cpu_rd_data),
+    .cpu_rx_size           (cpurx_cpu_size),
+    .cpu_rx_packet_ready   (cpurx_cpu_packet_ready),
+    .cpu_rx_packet_ack     (cpurx_cpu_packet_ack),
 
   /* CPU TX signals */
-    .cpu_tx_addr         (cputx_cpu_addr),
-    .cpu_tx_rd_data      (cputx_cpu_rd_data),
-    .cpu_tx_wr_data      (cputx_cpu_wr_data),
-    .cpu_tx_wr_en        (cputx_cpu_wr_en),
-    .cpu_tx_size         (cputx_cpu_size),
-    .cpu_tx_packet_ready (cputx_cpu_packet_ready),
-    .cpu_tx_packet_ack   (cputx_cpu_packet_ack),
+    .cpu_tx_buffer_addr    (cputx_cpu_addr),
+    .cpu_tx_buffer_rd_data (cputx_cpu_rd_data),
+    .cpu_tx_buffer_wr_data (cputx_cpu_wr_data),
+    .cpu_tx_buffer_wr_en   (cputx_cpu_wr_en),
+    .cpu_tx_size           (cputx_cpu_size),
+    .cpu_tx_ready          (cputx_cpu_packet_ready),
+    .cpu_tx_done           (cputx_cpu_packet_ack),
   /* PHY Status/Control */
     .phy_status  (phy_status),
     .phy_control (phy_control)
