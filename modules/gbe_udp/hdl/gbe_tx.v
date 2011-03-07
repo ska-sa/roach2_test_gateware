@@ -1,0 +1,437 @@
+`timescale 1ns/1ps
+module gbe_tx #(
+    parameter LARGE_PACKETS = 0,
+    parameter REG_APP_IF    = 1
+  ) (
+    // Application Interface
+    input         app_clk,
+    input         app_rst,
+    input   [7:0] app_data,
+    input         app_dvld,
+    input         app_eof,
+    input  [31:0] app_destip,
+    input  [15:0] app_destport,
+    output        app_afull, 
+    output        app_overflow, 
+
+    // MAC
+    input         mac_clk,
+    input         mac_rst,
+    output  [7:0] mac_tx_data,
+    output        mac_tx_dvld,
+    input         mac_tx_ack,
+
+    // Local Parameters
+    input         local_enable,
+    input  [47:0] local_mac,
+    input  [31:0] local_ip,
+    input  [15:0] local_port,
+    input   [7:0] local_gateway,
+
+    // CPU Arp Cache signals,
+    output  [7:0] arp_cache_addr,
+    input  [47:0] arp_cache_rd_data,
+
+    // CPU Interface
+    output [10:0] cpu_tx_buffer_addr,
+    input   [7:0] cpu_tx_buffer_rd_data,
+
+    input  [10:0] cpu_tx_size,
+    input         cpu_tx_ready,
+    output        cpu_tx_done
+  );
+
+  /**** Packet Fifo Signals ****/
+
+  /*
+     Packet fifo contains app data
+  */
+
+  wire  [7:0] packet_fifo_din;
+  wire        packet_fifo_wr;
+  wire        packet_fifo_overflow;
+  wire        packet_fifo_afull;
+
+  wire  [7:0] packet_fifo_dout;
+  wire        packet_fifo_rd;
+  wire        packet_fifo_empty;
+
+  tx_packet_fifo tx_packet_fifo_inst(
+    .wr_clk    (app_clk),
+    .din       (packet_fifo_din),
+    .wr_en     (packet_fifo_wr),
+
+    .rd_clk    (mac_clk),
+    .dout      (packet_fifo_dout),
+    .rd_en     (packet_fifo_rd),
+
+    .prog_full (packet_fifo_afull),
+    .empty     (packet_fifo_empty),
+    .overflow  (packet_fifo_overflow),
+
+    .rst       (app_rst)
+  );
+
+  /**** Control Fifo Signals ****/
+
+  /*
+     control fifo containts packet control info:
+     {data_count[15:0], dest_port[15:0], dest_ip[31:0] 
+  */
+
+  wire [63:0] ctrl_fifo_din;
+  wire        ctrl_fifo_wr;
+  wire        ctrl_fifo_overflow;
+  wire        ctrl_fifo_afull;
+
+  wire [63:0] ctrl_fifo_dout;
+  wire        ctrl_fifo_rd;
+  wire        ctrl_fifo_empty;
+
+
+  tx_packet_ctrl_fifo tx_packet_ctrl_fifo_inst(
+    .wr_clk    (app_clk),
+    .din       (ctrl_fifo_din),
+    .wr_en     (ctrl_fifo_wr),
+    .overflow  (ctrl_fifo_overflow),
+    .prog_full (ctrl_fifo_afull),
+
+    .rd_clk    (mac_clk),
+    .dout      (ctrl_fifo_dout),
+    .rd_en     (ctrl_fifo_rd),
+    .empty     (ctrl_fifo_empty),
+
+    rst       (app_rst)
+  );
+
+  /**** Application Trasmit Logic ****/
+
+  /* optional register stage */
+
+  wire   [7:0] app_data_int;
+  wire         app_dvld_int;
+  wire         app_eof_int;
+  wire  [31:0] app_destip_int;
+  wire  [15:0] app_destport_int;
+
+  /* We add this as a register option too */
+  wire         packet_eof;
+
+generate if (REG_APP_IF) begin : gen_app_if_reg
+  reg  [7:0] app_data_reg;
+  reg        app_dvld_reg;
+  reg        app_eof_reg;
+  reg [31:0] app_destip_reg;
+  reg [15:0] app_destport_reg;
+  reg        packet_eof_reg;
+
+  always @(posedge app_clk) begin
+    app_data_reg     <= app_data;
+    app_dvld_reg     <= app_dvld;
+    app_eof_reg      <= app_eof;
+    app_destip_reg   <= app_destip;
+    app_destport_reg <= app_destport;
+    packet_eof_reg   <= app_dvld && app_eof;
+  end
+
+  assign app_data_int     = app_data_reg;
+  assign app_dvld_int     = app_dvld_reg;
+  assign app_eof_int      = app_eof_reg;
+  assign app_destip_int   = app_destip_reg;
+  assign app_destport_int = app_destport_reg;
+  assign packet_eof       = packet_eof_reg;
+
+end else begin : gen_app_if_noreg
+
+  assign app_data_int     = app_data;
+  assign app_dvld_int     = app_dvld;
+  assign app_eof_int      = app_eof;
+  assign app_destip_int   = app_destip;
+  assign app_destport_int = app_destport;
+  assign packet_eof       = app_dvld && app_eof;
+
+end endgenerate
+
+  /* keep track of data count for ctrl_fifo */
+
+  reg [15:0] data_count;
+
+  always @(posedge app_clk) begin
+    if (app_rst) begin
+      data_count <= 1'd1; /* pre-add last word */
+    end else begin
+      if (ctrl_fifo_wr) begin
+        data_count <= 16'd1;
+`ifdef DESPERATE_DEBUG
+        $display("tge_tx: got fabric frame, size = %d", data_count);
+`endif
+      end else if (packet_fifo_wr) begin
+        data_count <= data_count + 1;
+      end
+    end
+  end
+
+  /* packet fifo assignments */
+
+  assign packet_fifo_din = app_data_int;
+  assign packet_fifo_wr  = app_dvld;
+
+  assign ctrl_fifo_din   = {data_count, app_destport_int, app_destip_int};
+  assign ctrl_fifo_wr    = packet_eof;
+
+  /* Almost fulls */
+  assign app_afull = packet_fifo_afull || ctrl_fifo_afull;
+
+  /* Overflows */
+  reg app_overflow_reg;
+  assign app_overflow = app_overflow_reg;
+
+  always @(posedge app_clk) begin
+    if (app_rst) begin
+      app_overflow_reg <= 1'b0;
+    end else begin
+      app_overflow_reg <= app_overflow_reg || (packet_fifo_overflow || ctrl_fifo_overflow);
+    end
+  end
+
+  /**** MAC Trasmit Logic ****/
+
+  /* control fifo signals */
+
+  wire [7:0] packet_data = packet_fifo_dout;
+
+  /* control fifo signals */
+  wire [15:0] ctrl_size     = ctrl_fifo_dout[63:48];
+  wire [15:0] ctrl_destport = ctrl_fifo_dout[47:32];
+  wire [31:0] ctrl_destip   = ctrl_fifo_dout[31:0];
+  reg packet_fifo_rd_reg;
+  assign packet_fifo_rd = packet_fifo_rd_reg;
+
+  /* ARP lookup */
+  assign arp_cache_addr = ctrl_destip[31:8] != local_ip[31:8] ? local_gateway : ctrl_destip[7:0];
+  wire [47:0] dest_mac = arp_cache_rd_data;
+
+  /* CPU interface signals */
+
+  reg [10:0] cpu_addr;
+  assign cpu_tx_buffer_addr = cpu_addr;
+  wire [7:0] cpu_data = cpu_tx_buffer_rd_data;
+
+  reg cpu_ack;
+  wire cpu_pending = cpu_tx_ready;
+  assign cpu_tx_done = cpu_ack;
+
+  /* Local enable retimer */
+  reg local_enableR;
+  reg local_enableRR;
+  assign local_enable_retimed = local_enableRR;
+  always @(posedge mac_clk) begin
+    local_enableR  <= local_enable;
+    local_enableRR <= local_enableR;
+  end
+
+  localparam MAC_HDR_SIZE = 14;
+  localparam IP_HDR_SIZE  = 20;
+  localparam UDP_HDR_SIZE = 8;
+
+  localparam HDR_SIZE    = MAC_HDR_SIZE + IP_HDR_SIZE + UDP_HDR_SIZE;
+
+  reg [2:0] tx_state;
+  localparam TX_IDLE     = 3'd0;
+  localparam TX_APP_HDR0 = 3'd1;
+  localparam TX_APP_DATA = 3'd2;
+  localparam TX_CPU_WAIT = 3'd3;
+  localparam TX_CPU_DATA = 3'd4;
+
+  // header progress
+  reg  [5:0] progress;
+
+  // bytes to send
+  reg [15:0] tx_count;
+
+  reg        tx_acked;
+
+  always @(posedge mac_clk) begin
+    if (mac_rst) begin
+      tx_state <= TX_IDLE;
+      tx_progress <= 4'd0;
+    end else begin
+       cpu_addr <= cpu_addr + 1;
+
+      /* final part of handshake, when the cpu clear the pending signal
+         we clear out ack to allow further transfers */
+      if (!cpu_pending) begin 
+        cpu_ack <= 1'b0;
+      end
+
+      case (tx_state)
+        TX_IDLE: begin
+          tx_acked <= 1'b0;
+          if (!ctrl_fifo_empty && !app_overflow_retimed && local_enabled_retime) begin
+            tx_state <= TX_APP_HDR;
+            progress <= 5'd0;
+            tx_count <= ctrl_fifo_size;
+          end
+          if (!cpu_ack && cpu_pending) begin
+            tx_state <= TX_CPU_WAIT;
+            tx_count <= cpu_size;
+            cpu_addr <= 11'h0;
+          end
+        end
+        TX_APP_HDR: begin
+          if (mac_tx_ack)
+            tx_acked <= 1'b1;
+
+          if (mac_tx_ack || tx_acked)
+            progress <= progress + 1;
+
+          if (progress == HDR_SIZE - 1) begin
+            tx_state <= TX_APP_DATA;
+          end
+        end
+        TX_APP_DATA: begin
+          tx_count <= tx_count - 1;
+          if (tx_count == 16'h1) begin
+            tx_state <= TX_IDLE;
+          end
+        end
+        TX_CPU_WAIT: begin
+          if (mac_tx_ack) begin
+            tx_state <= TX_CPU_DATA;
+          end else begin
+            cpu_addr <= 11'h0;
+          end
+        end
+        TX_CPU_DATA: begin
+          tx_count <= tx_count - 1;
+          if (tx_count == 1) begin
+            tx_state <= TX_IDLE;
+            cpu_ack   <= 1'b1;
+          end 
+        end
+      endcase
+    end
+  end
+
+  assign ctrl_fifo_rd = (tx_state == TX_APP_DATA) && (tx_count == 16'h1);
+  assign packet_fifo_rd = tx_state == TX_APP_DATA;
+
+  /* UDP/IP specific Calculations */
+
+  reg [15:0] ip_length;
+  reg [15:0] udp_length;
+
+  always @(posedge mac_clk) begin
+    ip_length  <= {ctrl_size, 2'b00} + 16'd28;
+    udp_length <= {ctrl_size, 2'b00} + 16'd8;
+  end
+
+  /* checksum assignments */
+  wire [17:0] ip_checksum_fixed_0 = {8'h00, 16'h8412} +
+                                    {8'h00, local_ip[31:16]} + 
+                                    {8'h00, local_ip[15:0]};
+  wire [16:0] ip_checksum_fixed_1 = {1'b0,  ip_checksum_fixed_0[15:0]} +
+                                    {15'b0, ip_checksum_fixed_0[17:16]};
+  wire [15:0] ip_checksum_fixed   = {ip_checksum_fixed_1[15:0]} +
+                                    {15'b0, ip_checksum_fixed_1[16]};
+
+
+  reg [17:0] ip_checksum_0;
+  reg [16:0] ip_checksum_1;
+  reg [15:0] ip_checksum;
+
+  always @(posedge mac_clk) begin
+    ip_checksum_0 <= {2'b00, ip_checksum_fixed  } +
+                     {2'b00, ip_length          } +
+                     {2'b00, ctrl_destip[31:16] } +
+                     {2'b00, ctrl_destip[15:0 ] };
+    ip_checksum_1 <= {1'b0 , ip_checksum_0[15:0 ]} +
+                     {15'b0, ip_checksum_0[17:16]};
+    ip_checksum   <= ~(ip_checksum_1[15:0] + {15'b0, ip_checksum_1[16]});
+  end
+
+  /* MAC interface assignments */
+
+  reg mac_dvld_reg;
+
+  always @(posedge mac_clk) begin
+    mac_dvld_reg <= tx_state != TX_IDLE;
+  end
+
+  assign mac_tx_dvld = mac_dvld_reg;
+
+  reg [7:0] mac_data_reg;
+  assign mac_tx_data = mac_data_reg;
+
+  /* This is a VERY large multplexor.
+     It may be beneficial to pipeline it, 
+     but this would require a fifo or an ugly 
+     registering scheme */
+
+  always @(posedge mac_clk) begin
+    case (tx_state)
+      TX_APP_HDR: begin
+        case (progress)
+          /* MAC Header */
+          6'd00: mac_data_reg <= dest_mac[47:40];
+          6'd01: mac_data_reg <= dest_mac[39:32];
+          6'd02: mac_data_reg <= dest_mac[31:24];
+          6'd03: mac_data_reg <= dest_mac[23:16];
+          6'd04: mac_data_reg <= dest_mac[15:8];
+          6'd05: mac_data_reg <= dest_mac[7:0];
+          6'd06: mac_data_reg <= local_mac[47:40];
+          6'd07: mac_data_reg <= local_mac[39:32]; 
+          6'd08: mac_data_reg <= local_mac[31:24]; 
+          6'd09: mac_data_reg <= local_mac[23:16]; 
+          6'd10: mac_data_reg <= local_mac[15:8];  
+          6'd11: mac_data_reg <= local_mac[7:0];   
+          6'd12: mac_data_reg <= 8'h08; //Ethertype 0800 = IPV4
+          6'd13: mac_data_reg <= 8'h00;
+          /* IP Header */
+          6'd14: mac_data_reg <= 8'h45; //IP Version 
+          6'd15: mac_data_reg <= 8'h00; //IP Type
+          6'd16: mac_data_reg <= ip_length[15:8];
+          6'd17: mac_data_reg <= ip_length[7:0];
+
+          6'd18: mac_data_reg <= 8'h00;
+          6'd19: mac_data_reg <= 8'h00;
+          6'd20: mac_data_reg <= 8'h40;
+          6'd21: mac_data_reg <= 8'h00;
+
+          6'd22: mac_data_reg <= 8'hff;
+          6'd23: mac_data_reg <= 8'h11;
+          6'd24: mac_data_reg <= ip_checksum[15:8];
+          6'd25: mac_data_reg <= ip_checksum[7:0];
+
+          6'd26: mac_data_reg <= local_ip[31:24];
+          6'd27: mac_data_reg <= local_ip[23:16];
+          6'd28: mac_data_reg <= local_ip[15:8];
+          6'd29: mac_data_reg <= local_ip[7:0];
+
+          6'd30: mac_data_reg <= ctrl_destip[31:24];
+          6'd31: mac_data_reg <= ctrl_destip[23:16];
+          6'd32: mac_data_reg <= ctrl_destip[15:8];
+          6'd33: mac_data_reg <= ctrl_destip[7:0];
+
+          /* UDP Header */
+          6'd34: mac_data_reg <= local_port[15:8];
+          6'd35: mac_data_reg <= local_port[7:0];
+          6'd36: mac_data_reg <= ctrl_destport[15:8];
+          6'd37: mac_data_reg <= ctrl_destport[7:0];
+
+          6'd38: mac_data_reg <= udp_length[15:8];
+          6'd39: mac_data_reg <= udp_length[7:0];
+          6'd40: mac_data_reg <= 8'h00;
+          6'd41: mac_data_reg <= 8'h00;
+        endcase
+      end
+      TX_APP_DATA: begin
+        mac_data_reg <= packet_data;
+      end
+      default: begin
+        mac_data_reg <= cpu_data;
+      end
+    endcase
+  end
+
+endmodule
