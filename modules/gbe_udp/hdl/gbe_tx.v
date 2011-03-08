@@ -214,7 +214,10 @@ end endgenerate
 
   /* CPU interface signals */
 
-  reg [10:0] cpu_addr;
+  reg [10:0] cpu_addr_reg;
+  wire [10:0] cpu_addr;
+  wire [10:0] cpu_addr_next;
+
   assign cpu_tx_buffer_addr = cpu_addr;
   wire [7:0] cpu_data = cpu_tx_buffer_rd_data;
 
@@ -277,7 +280,6 @@ end endgenerate
       progress <= 4'd0;
       cpu_buffer_sel_reg <= 1'b0;
     end else begin
-       cpu_addr <= cpu_addr + 1;
 
       /* final part of handshake, when the cpu clear the pending signal
          we clear out ack to allow further transfers */
@@ -297,7 +299,7 @@ end endgenerate
           if (!cpu_ack && cpu_pending) begin
             tx_state <= TX_CPU_WAIT;
             tx_count <= cpu_tx_size;
-            cpu_addr <= 11'h0;
+            cpu_addr_reg <= 11'h0;
             cpu_ack  <= 1'b1;
             cpu_buffer_sel_reg <= ~cpu_buffer_sel_reg;
           end
@@ -339,19 +341,21 @@ end endgenerate
         TX_CPU_WAIT: begin
           if (mac_tx_ack) begin
             tx_state <= TX_CPU_DATA;
-          end else begin
-            cpu_addr <= 11'h0;
           end
         end
         TX_CPU_DATA: begin
           tx_count <= tx_count - 1;
-          if (tx_count == 1) begin
+          if (tx_count == 2) begin
             tx_state <= TX_IDLE;
           end 
         end
       endcase
+      cpu_addr_reg <= cpu_addr_next;
     end
   end
+
+  assign cpu_addr_next = tx_state == TX_CPU_DATA || mac_tx_ack ? cpu_addr_reg + 1 : 0;
+  assign cpu_addr = cpu_addr_next;
 
   assign ctrl_fifo_rd = (tx_state == TX_APP_DATA) && (tx_count == 16'h1);
   assign packet_fifo_rd = tx_state == TX_APP_DATA;

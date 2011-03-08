@@ -361,12 +361,14 @@ end else begin : enable_cpu_tx
   cpu_buffer cpu_buffer_tx(
     .clka  (wb_clk_i),
     .addra ({!cpu_tx_buffer_sel, cputx_cpu_addr}),
-    .douta (cputx_cpu_rd_data),
-    .dina  (cputx_cpu_wr_data),
+    .douta ({cputx_cpu_rd_data[ 7:0 ], cputx_cpu_rd_data[15:8],
+             cputx_cpu_rd_data[23:16], cputx_cpu_rd_data[31:24]}),
+    .dina  ({cputx_cpu_wr_data[ 7:0 ], cputx_cpu_wr_data[15:8],
+             cputx_cpu_wr_data[23:16], cputx_cpu_wr_data[31:24]}),
     .wea   ({4{cputx_cpu_wr_en}}),
 
     .clkb  (mac_tx_clk),
-    .addrb ({cpu_tx_buffer_sel, cputx_tx_addr}),
+    .addrb ({cpu_tx_buffer_sel_unstable, cputx_tx_addr}),
     .doutb (cputx_tx_rd_data),
     .dinb  (8'b0),
     .web   (1'b0)
@@ -384,7 +386,8 @@ end else begin : enable_cpu_rx
   cpu_buffer cpu_buffer_rx(
     .clka  (wb_clk_i),
     .addra ({!cpu_rx_buffer_sel, cpurx_cpu_addr}),
-    .douta (cpurx_cpu_rd_data),
+    .douta ({cpurx_cpu_rd_data[ 7:0 ], cpurx_cpu_rd_data[15:8],
+             cpurx_cpu_rd_data[23:16], cpurx_cpu_rd_data[31:24]}),
     .dina  (32'b0),
     .wea   (4'b0),
 

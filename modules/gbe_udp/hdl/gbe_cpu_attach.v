@@ -70,10 +70,10 @@ module gbe_cpu_attach #(
   localparam ARP_CACHE_OFFSET = 32'h3000;
   localparam ARP_CACHE_HIGH   = 32'h37FF;
 
-  wire reg_sel   = cpu_trans && (cpu_addr >= REGISTERS_OFFSET) && (cpu_addr <= REGISTERS_HIGH);
-  wire rxbuf_sel = cpu_trans && (cpu_addr >= RX_BUFFER_OFFSET) && (cpu_addr <= RX_BUFFER_HIGH);
-  wire txbuf_sel = cpu_trans && (cpu_addr >= TX_BUFFER_OFFSET) && (cpu_addr <= TX_BUFFER_HIGH);
-  wire arp_sel   = cpu_trans && (cpu_addr >= ARP_CACHE_OFFSET) && (cpu_addr <= ARP_CACHE_HIGH);
+  wire reg_sel   = (cpu_addr >= REGISTERS_OFFSET) && (cpu_addr <= REGISTERS_HIGH);
+  wire rxbuf_sel = (cpu_addr >= RX_BUFFER_OFFSET) && (cpu_addr <= RX_BUFFER_HIGH);
+  wire txbuf_sel = (cpu_addr >= TX_BUFFER_OFFSET) && (cpu_addr <= TX_BUFFER_HIGH);
+  wire arp_sel   = (cpu_addr >= ARP_CACHE_OFFSET) && (cpu_addr <= ARP_CACHE_HIGH);
 
   wire [31:0] reg_addr   = cpu_addr - REGISTERS_OFFSET;
   wire [31:0] rxbuf_addr = cpu_addr - RX_BUFFER_OFFSET;
@@ -135,11 +135,13 @@ module gbe_cpu_attach #(
     end
 
     /* The size will be set to zero when the double buffer is swapped */
-    if (cpu_rx_ready == 8'd0) begin
+    if (!cpu_rx_ready) begin
       cpu_rx_ack_reg  <= 1'b0;
     end
 
     if (wb_rst_i) begin
+      cpu_tx_ready_reg  <= 1'b0;
+
       cpu_data_src      <= 4'b0;
 
       local_mac_reg     <= LOCAL_MAC;
@@ -165,7 +167,7 @@ module gbe_cpu_attach #(
         cpu_ack <= 1'b1;
 
       // ARP Cache
-      if (arp_sel) begin 
+      if (arp_sel && cpu_trans) begin 
         if (!cpu_rnw) begin
           cpu_ack  <= 1'b0;
           cpu_wait <= 1'b1;
@@ -175,7 +177,7 @@ module gbe_cpu_attach #(
       end
 
       // RX Buffer 
-      if (rxbuf_sel) begin
+      if (rxbuf_sel && cpu_trans) begin
         if (!cpu_rnw) begin
         end else begin
           use_rx_data <= 1'b1;
@@ -183,7 +185,7 @@ module gbe_cpu_attach #(
       end
 
       // TX Buffer 
-      if (txbuf_sel) begin
+      if (txbuf_sel && cpu_trans) begin
         if (!cpu_rnw) begin
           cpu_ack  <= 1'b0;
           cpu_wait <= 1'b1;
@@ -193,7 +195,7 @@ module gbe_cpu_attach #(
       end
 
       // registers
-      if (reg_sel) begin
+      if (reg_sel && cpu_trans) begin
         cpu_data_src <= reg_addr[5:2];
         if (!cpu_rnw) begin
           case (reg_addr[5:2])

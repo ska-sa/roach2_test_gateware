@@ -138,7 +138,7 @@ module TB_gbe_dup();
     $dumpvars;
     clk_counter <= 32'b0;
     rst <= 1'b1;
-    #1000
+    #100
     rst <= 1'b0;
     #`SIM_LENGTH
     $display("FAILED: simulation timed out");
@@ -179,7 +179,7 @@ module TB_gbe_dup();
   end
 
   assign app_tx_data     = !app_tx_counter[0] ? app_tx_counter[16:9] : app_tx_counter[8:1];
-  assign app_tx_dvld     = app_tx_en && !app_rst;
+  assign app_tx_dvld     = 1'b0;//app_tx_en && !app_rst;
   assign app_tx_eof      = app_tx_counter[7:0] == {8{1'b1}};
   assign app_tx_destip   = {8'd192, 8'd168, 8'd64, 8'd1};
   assign app_tx_destport = 16'hbeef;
@@ -262,12 +262,69 @@ module TB_gbe_dup();
 
   assign wb_clk_i = cpu_clk;
   assign wb_rst_i = cpu_rst;
-  assign wb_stb_i = 1'b0;
-  assign wb_cyc_i = 1'b0;
-  assign wb_we_i  = 1'b0;
-  assign wb_adr_i = 32'b0;
-  assign wb_dat_i = 32'b0;
-  assign wb_sel_i = 4'b0000;
+
+  reg [31:0] cpu_tx_progress;
+  reg [2:0] cpu_state;
+  reg [31:0] cpu_test_count;
+  localparam CPU_WR   = 0;
+  localparam CPU_SEND = 1;
+
+  reg wait_ack;
+
+  reg cpu_stb;
+  reg [31:0] wb_adr_reg;
+  reg        wb_we_reg;
+  reg [31:0] wb_dat_reg;
+
+  assign wb_stb_i = cpu_stb;
+  assign wb_cyc_i = cpu_stb;
+  assign wb_we_i  = wb_we_reg;
+  assign wb_adr_i = wb_adr_reg;
+  assign wb_dat_i = wb_dat_reg;
+  assign wb_sel_i = 4'b1111;
+
+  localparam CPU_TXSIZE = 16'd77;
+
+  always @(posedge cpu_clk) begin
+    cpu_stb <= 1'b0;
+
+    if (cpu_rst) begin
+      cpu_state <= CPU_WR;
+      cpu_tx_progress <= 0;
+      cpu_test_count  <= 0;
+      wait_ack <= 1'b0;
+    end else begin
+      if (wait_ack) begin
+        if (wb_ack_o || wb_err_o)
+          wait_ack <= 1'b0;
+      end else begin
+        cpu_stb <= 1'b1;
+        case (cpu_state)
+          CPU_WR: begin
+            wait_ack   <= 1'b1;
+            wb_we_reg  <= 1'b1;
+            wb_adr_reg <= 32'h1000 + (cpu_tx_progress[7:0] << 2);
+            wb_dat_reg <= cpu_tx_progress[31:0];
+            cpu_tx_progress <= cpu_tx_progress + 1;
+            if (cpu_tx_progress[7:0] == 63)
+              cpu_state <= CPU_SEND;
+          end
+          CPU_SEND: begin
+            wait_ack   <= 1'b1;
+            wb_we_reg  <= 1'b1;
+            wb_adr_reg <= 6*4;
+            wb_dat_reg <= {CPU_TXSIZE, 16'hffff};
+            if (cpu_test_count == 5) begin
+              cpu_state <= 2;
+            end else begin
+              cpu_state <= CPU_WR;
+            end
+            cpu_test_count <= cpu_test_count + 1;
+          end
+        endcase
+      end
+    end
+  end
 
 
 
