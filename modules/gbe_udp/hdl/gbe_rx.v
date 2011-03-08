@@ -1,20 +1,22 @@
+`timescale 1ns/1ps
 module gbe_rx #(
     parameter DIST_RAM = 0
   ) (
     input         app_clk,
 
-    output  [7:0] app_rx_data,
-    output        app_rx_dvld,
-    output        app_rx_eof,
-    output [31:0] app_rx_srcip,
-    output [15:0] app_rx_srcport,
-    output        app_rx_badframe,
+    output  [7:0] app_data,
+    output        app_dvld,
+    output        app_eof,
+    output [31:0] app_srcip,
+    output [15:0] app_srcport,
+    output        app_badframe,
 
-    output        app_rx_overrun,
-    input         app_rx_ack,
-    input         app_rx_rst,
+    output        app_overrun,
+    output        app_afull,
+    input         app_ack,
+    input         app_rst,
 
-    input         mac_rx_clk,
+    input         mac_clk,
     input   [7:0] mac_rx_data,
     input         mac_rx_dvld,
     input         mac_rx_goodframe,

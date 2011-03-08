@@ -38,7 +38,8 @@ module gbe_tx #(
 
     input  [10:0] cpu_tx_size,
     input         cpu_tx_ready,
-    output        cpu_tx_done
+    output        cpu_tx_done,
+    output        cpu_buffer_sel
   );
 
   /**** Packet Fifo Signals ****/
@@ -89,7 +90,7 @@ module gbe_tx #(
   wire        ctrl_fifo_empty;
 
 
-  tx_packet_ctrl_fifo tx_packet_ctrl_fifo_inst(
+  ctrl_fifo tx_packet_ctrl_fifo_inst(
     .wr_clk    (app_clk),
     .din       (ctrl_fifo_din),
     .wr_en     (ctrl_fifo_wr),
@@ -101,7 +102,7 @@ module gbe_tx #(
     .rd_en     (ctrl_fifo_rd),
     .empty     (ctrl_fifo_empty),
 
-    rst       (app_rst)
+    .rst       (app_rst)
   );
 
   /**** Application Trasmit Logic ****/
@@ -174,7 +175,7 @@ end endgenerate
   /* packet fifo assignments */
 
   assign packet_fifo_din = app_data_int;
-  assign packet_fifo_wr  = app_dvld;
+  assign packet_fifo_wr  = app_dvld_int;
 
   assign ctrl_fifo_din   = {data_count, app_destport_int, app_destip_int};
   assign ctrl_fifo_wr    = packet_eof;
@@ -224,10 +225,20 @@ end endgenerate
   /* Local enable retimer */
   reg local_enableR;
   reg local_enableRR;
-  assign local_enable_retimed = local_enableRR;
+  wire local_enable_retimed = local_enableRR;
   always @(posedge mac_clk) begin
     local_enableR  <= local_enable;
     local_enableRR <= local_enableR;
+  end
+
+  /* Overflow retimer */
+
+  reg app_overflowR;
+  reg app_overflowRR;
+  wire app_overflow_retimed = app_overflowRR;
+  always @(posedge mac_clk) begin
+    app_overflowR  <= app_overflow;
+    app_overflowRR <= app_overflowR;
   end
 
   localparam MAC_HDR_SIZE = 14;
@@ -239,9 +250,11 @@ end endgenerate
   reg [2:0] tx_state;
   localparam TX_IDLE     = 3'd0;
   localparam TX_APP_HDR0 = 3'd1;
-  localparam TX_APP_DATA = 3'd2;
-  localparam TX_CPU_WAIT = 3'd3;
-  localparam TX_CPU_DATA = 3'd4;
+  localparam TX_APP_HDR1 = 3'd2;
+  localparam TX_APP_HDR2 = 3'd3;
+  localparam TX_APP_DATA = 3'd4;
+  localparam TX_CPU_WAIT = 3'd5;
+  localparam TX_CPU_DATA = 3'd6;
 
   // header progress
   reg  [5:0] progress;
@@ -251,10 +264,18 @@ end endgenerate
 
   reg        tx_acked;
 
+  reg        hdr_last;
+
+  reg cpu_buffer_sel_reg;
+  assign cpu_buffer_sel = cpu_buffer_sel_reg;
+
   always @(posedge mac_clk) begin
+    hdr_last <= 1'b0;
+
     if (mac_rst) begin
       tx_state <= TX_IDLE;
-      tx_progress <= 4'd0;
+      progress <= 4'd0;
+      cpu_buffer_sel_reg <= 1'b0;
     end else begin
        cpu_addr <= cpu_addr + 1;
 
@@ -266,32 +287,52 @@ end endgenerate
 
       case (tx_state)
         TX_IDLE: begin
+          progress <= 5'd1;
           tx_acked <= 1'b0;
-          if (!ctrl_fifo_empty && !app_overflow_retimed && local_enabled_retime) begin
-            tx_state <= TX_APP_HDR;
-            progress <= 5'd0;
-            tx_count <= ctrl_fifo_size;
+          if (!ctrl_fifo_empty && !app_overflow_retimed && local_enable_retimed) begin
+            tx_state <= TX_APP_HDR0;
+            /* we start at one due to special case with ack delay */
+            tx_count <= ctrl_size;
           end
           if (!cpu_ack && cpu_pending) begin
             tx_state <= TX_CPU_WAIT;
-            tx_count <= cpu_size;
+            tx_count <= cpu_tx_size;
             cpu_addr <= 11'h0;
+            cpu_ack  <= 1'b1;
+            cpu_buffer_sel_reg <= ~cpu_buffer_sel_reg;
           end
         end
-        TX_APP_HDR: begin
+        TX_APP_HDR0: begin
           if (mac_tx_ack)
             tx_acked <= 1'b1;
 
           if (mac_tx_ack || tx_acked)
             progress <= progress + 1;
 
-          if (progress == HDR_SIZE - 1) begin
+          if (progress == MAC_HDR_SIZE - 1) begin
+            tx_state <= TX_APP_HDR1;
+            progress <= 0;
+          end
+        end
+        TX_APP_HDR1: begin
+          progress <= progress + 1;
+
+          if (progress == IP_HDR_SIZE - 1) begin
+            tx_state <= TX_APP_HDR2;
+            progress <= 0;
+          end
+        end
+        TX_APP_HDR2: begin
+          progress <= progress + 1;
+
+          if (progress == UDP_HDR_SIZE - 1) begin
             tx_state <= TX_APP_DATA;
+            hdr_last <= 1'b1;
           end
         end
         TX_APP_DATA: begin
           tx_count <= tx_count - 1;
-          if (tx_count == 16'h1) begin
+          if (tx_count == 16'h0) begin
             tx_state <= TX_IDLE;
           end
         end
@@ -306,7 +347,6 @@ end endgenerate
           tx_count <= tx_count - 1;
           if (tx_count == 1) begin
             tx_state <= TX_IDLE;
-            cpu_ack   <= 1'b1;
           end 
         end
       endcase
@@ -352,84 +392,99 @@ end endgenerate
 
   /* MAC interface assignments */
 
-  reg mac_dvld_reg;
-
-  always @(posedge mac_clk) begin
-    mac_dvld_reg <= tx_state != TX_IDLE;
-  end
-
-  assign mac_tx_dvld = mac_dvld_reg;
+  assign mac_tx_dvld = tx_state != TX_IDLE;
 
   reg [7:0] mac_data_reg;
   assign mac_tx_data = mac_data_reg;
 
-  /* This is a VERY large multplexor.
-     It may be beneficial to pipeline it, 
-     but this would require a fifo or an ugly 
-     registering scheme */
+  reg [7:0] hdr0_dat;
+  reg [7:0] hdr1_dat;
+  reg [7:0] hdr2_dat;
+ 
+  wire [7:0] hdr0_first = dest_mac[47:40];
 
   always @(posedge mac_clk) begin
+    case (progress)
+      /* MAC Header */
+      6'd00: hdr0_dat <= dest_mac[47:40];
+      6'd01: hdr0_dat <= dest_mac[39:32];
+      6'd02: hdr0_dat <= dest_mac[31:24];
+      6'd03: hdr0_dat <= dest_mac[23:16];
+      6'd04: hdr0_dat <= dest_mac[15:8];
+      6'd05: hdr0_dat <= dest_mac[7:0];
+      6'd06: hdr0_dat <= local_mac[47:40];
+      6'd07: hdr0_dat <= local_mac[39:32]; 
+      6'd08: hdr0_dat <= local_mac[31:24]; 
+      6'd09: hdr0_dat <= local_mac[23:16]; 
+      6'd10: hdr0_dat <= local_mac[15:8];  
+      6'd11: hdr0_dat <= local_mac[7:0];   
+      6'd12: hdr0_dat <= 8'h08; //Ethertype 0800 = IPV4
+      6'd13: hdr0_dat <= 8'h00;
+    endcase
+
+    case(progress)
+      /* IP Header */
+      6'd00: hdr1_dat <= 8'h45; //IP Version 
+      6'd01: hdr1_dat <= 8'h00; //IP Type
+      6'd02: hdr1_dat <= ip_length[15:8];
+      6'd03: hdr1_dat <= ip_length[7:0];
+      6'd04: hdr1_dat <= 8'h00;
+      6'd05: hdr1_dat <= 8'h00;
+      6'd06: hdr1_dat <= 8'h40;
+      6'd07: hdr1_dat <= 8'h00;
+      6'd08: hdr1_dat <= 8'hff;
+      6'd09: hdr1_dat <= 8'h11;
+      6'd10: hdr1_dat <= ip_checksum[15:8];
+      6'd11: hdr1_dat <= ip_checksum[7:0];
+      6'd12: hdr1_dat <= local_ip[31:24];
+      6'd13: hdr1_dat <= local_ip[23:16];
+      6'd14: hdr1_dat <= local_ip[15:8];
+      6'd15: hdr1_dat <= local_ip[7:0];
+      6'd16: hdr1_dat <= ctrl_destip[31:24];
+      6'd17: hdr1_dat <= ctrl_destip[23:16];
+      6'd18: hdr1_dat <= ctrl_destip[15:8];
+      6'd19: hdr1_dat <= ctrl_destip[7:0];
+    endcase
+
+
+    case (progress)
+      /* UDP Header */
+      6'd0: hdr2_dat <= local_port[15:8];
+      6'd1: hdr2_dat <= local_port[7:0];
+      6'd2: hdr2_dat <= ctrl_destport[15:8];
+      6'd3: hdr2_dat <= ctrl_destport[7:0];
+      6'd4: hdr2_dat <= udp_length[15:8];
+      6'd5: hdr2_dat <= udp_length[7:0];
+      6'd6: hdr2_dat <= 8'h00;
+      6'd7: hdr2_dat <= 8'h00;
+    endcase
+  end
+
+  always @(*) begin
     case (tx_state)
-      TX_APP_HDR: begin
-        case (progress)
-          /* MAC Header */
-          6'd00: mac_data_reg <= dest_mac[47:40];
-          6'd01: mac_data_reg <= dest_mac[39:32];
-          6'd02: mac_data_reg <= dest_mac[31:24];
-          6'd03: mac_data_reg <= dest_mac[23:16];
-          6'd04: mac_data_reg <= dest_mac[15:8];
-          6'd05: mac_data_reg <= dest_mac[7:0];
-          6'd06: mac_data_reg <= local_mac[47:40];
-          6'd07: mac_data_reg <= local_mac[39:32]; 
-          6'd08: mac_data_reg <= local_mac[31:24]; 
-          6'd09: mac_data_reg <= local_mac[23:16]; 
-          6'd10: mac_data_reg <= local_mac[15:8];  
-          6'd11: mac_data_reg <= local_mac[7:0];   
-          6'd12: mac_data_reg <= 8'h08; //Ethertype 0800 = IPV4
-          6'd13: mac_data_reg <= 8'h00;
-          /* IP Header */
-          6'd14: mac_data_reg <= 8'h45; //IP Version 
-          6'd15: mac_data_reg <= 8'h00; //IP Type
-          6'd16: mac_data_reg <= ip_length[15:8];
-          6'd17: mac_data_reg <= ip_length[7:0];
-
-          6'd18: mac_data_reg <= 8'h00;
-          6'd19: mac_data_reg <= 8'h00;
-          6'd20: mac_data_reg <= 8'h40;
-          6'd21: mac_data_reg <= 8'h00;
-
-          6'd22: mac_data_reg <= 8'hff;
-          6'd23: mac_data_reg <= 8'h11;
-          6'd24: mac_data_reg <= ip_checksum[15:8];
-          6'd25: mac_data_reg <= ip_checksum[7:0];
-
-          6'd26: mac_data_reg <= local_ip[31:24];
-          6'd27: mac_data_reg <= local_ip[23:16];
-          6'd28: mac_data_reg <= local_ip[15:8];
-          6'd29: mac_data_reg <= local_ip[7:0];
-
-          6'd30: mac_data_reg <= ctrl_destip[31:24];
-          6'd31: mac_data_reg <= ctrl_destip[23:16];
-          6'd32: mac_data_reg <= ctrl_destip[15:8];
-          6'd33: mac_data_reg <= ctrl_destip[7:0];
-
-          /* UDP Header */
-          6'd34: mac_data_reg <= local_port[15:8];
-          6'd35: mac_data_reg <= local_port[7:0];
-          6'd36: mac_data_reg <= ctrl_destport[15:8];
-          6'd37: mac_data_reg <= ctrl_destport[7:0];
-
-          6'd38: mac_data_reg <= udp_length[15:8];
-          6'd39: mac_data_reg <= udp_length[7:0];
-          6'd40: mac_data_reg <= 8'h00;
-          6'd41: mac_data_reg <= 8'h00;
-        endcase
+      TX_APP_HDR0: begin
+        mac_data_reg <= mac_tx_ack ? hdr0_first : hdr0_dat;
+      end
+      TX_APP_HDR1: begin
+        mac_data_reg <= hdr1_dat;
+      end
+      TX_APP_HDR2: begin
+        mac_data_reg <= hdr2_dat;
       end
       TX_APP_DATA: begin
-        mac_data_reg <= packet_data;
+        mac_data_reg <= hdr_last ? hdr2_dat : packet_data;
       end
       default: begin
         mac_data_reg <= cpu_data;
+      end
+    endcase
+
+    case (tx_state)
+      TX_APP_DATA: begin
+        packet_fifo_rd_reg <= hdr_last ? 1'b0 : 1'b1;
+      end
+      default: begin
+        packet_fifo_rd_reg <= 1'b0;
       end
     endcase
   end

@@ -1,3 +1,4 @@
+`timescale 1ns/1ps
 module gbe_udp #(
   /* Enable the application interface at startup */
     parameter LOCAL_ENABLE = 0,
@@ -43,25 +44,28 @@ module gbe_udp #(
     output        app_rx_badframe,
 
     output        app_rx_overrun,
+    output        app_rx_afull,
     input         app_rx_ack,
     input         app_rx_rst,
 
   /**** MAC Interface ****/
 
     input         mac_tx_clk,
+    input         mac_tx_rst,
     output  [7:0] mac_tx_data,
     output        mac_tx_dvld,
     input         mac_tx_ack,
 
     input         mac_rx_clk,
+    input         mac_rx_rst,
     input   [7:0] mac_rx_data,
     input         mac_rx_dvld,
     input         mac_rx_goodframe,
     input         mac_rx_badframe,
 
   /**** PHY Status/Control ****/
-    input  [15:0] phy_status,
-    output [15:0] phy_control,
+    input  [31:0] phy_status,
+    output [31:0] phy_control,
 
   /**** CPU Bus Attachment ****/
     input         wb_clk_i,
@@ -71,10 +75,10 @@ module gbe_udp #(
     input         wb_we_i,
     input  [31:0] wb_adr_i,
     input  [31:0] wb_dat_i,
-    input   [3:0] wb_stb_i,
+    input   [3:0] wb_sel_i,
     output [31:0] wb_dat_o,
     output        wb_err_o,
-    input         wb_ack_o
+    output        wb_ack_o
   );
 
 /****** Wishbone attachment ******/
@@ -97,25 +101,27 @@ module gbe_udp #(
   wire [31:0] cputx_cpu_rd_data;
   wire [31:0] cputx_cpu_wr_data;
   wire        cputx_cpu_wr_en;
-  wire [11:0] cputx_cpu_size; //up to 2k
-  wire        cputx_cpu_packet_ready;
-  wire        cputx_cpu_packet_ack;
+
+  wire [11:0] cpu_tx_size; //up to 2k
+  wire        cpu_tx_packet_ready;
+  wire        cpu_tx_packet_ack;
 
   /* CPU RX signals */
   wire  [8:0] cpurx_cpu_addr;
   wire [31:0] cpurx_cpu_rd_data;
-  wire [11:0] cpurx_cpu_size; //up to 2k
-  wire        cpurx_cpu_packet_ready;
-  wire        cpurx_cpu_packet_ack;
 
-  gbe_cpu_attach (
-    .APP_ENABLE     (LOCAL_ENABLE),
+  wire [11:0] cpu_rx_size; //up to 2k
+  wire        cpu_rx_packet_ready;
+  wire        cpu_rx_packet_ack;
+
+  gbe_cpu_attach #(
+    .LOCAL_ENABLE   (LOCAL_ENABLE),
     .LOCAL_MAC      (LOCAL_MAC),
     .LOCAL_IP       (LOCAL_IP),
     .LOCAL_PORT     (LOCAL_PORT),
     .LOCAL_GATEWAY  (LOCAL_GATEWAY),
     .PHY_CONFIG     (PHY_CONFIG)
-  gbe_cpu_attach_inst (
+  ) gbe_cpu_attach_inst (
     .wb_clk_i (wb_clk_i),
     .wb_rst_i (wb_rst_i),
     .wb_stb_i (wb_stb_i),
@@ -123,10 +129,10 @@ module gbe_udp #(
     .wb_we_i  (wb_we_i),
     .wb_adr_i (wb_adr_i),
     .wb_dat_i (wb_dat_i),
-    .wb_stb_i (wb_stb_i),
+    .wb_sel_i (wb_sel_i),
     .wb_dat_o (wb_dat_o),
     .wb_err_o (wb_err_o),
-    .wb_ack_o (wb_ack_o)
+    .wb_ack_o (wb_ack_o),
   /* Common CPU signals */
     .local_enable  (local_enable),
     .local_mac     (local_mac),
@@ -143,21 +149,21 @@ module gbe_udp #(
   /* CPU RX signals */
     .cpu_rx_buffer_addr    (cpurx_cpu_addr),
     .cpu_rx_buffer_rd_data (cpurx_cpu_rd_data),
-    .cpu_rx_size           (cpurx_cpu_size),
-    .cpu_rx_packet_ready   (cpurx_cpu_packet_ready),
-    .cpu_rx_packet_ack     (cpurx_cpu_packet_ack),
+    .cpu_rx_size           (cpu_rx_size),
+    .cpu_rx_ready          (cpu_rx_packet_ready),
+    .cpu_rx_ack            (cpu_rx_packet_ack),
 
   /* CPU TX signals */
     .cpu_tx_buffer_addr    (cputx_cpu_addr),
     .cpu_tx_buffer_rd_data (cputx_cpu_rd_data),
     .cpu_tx_buffer_wr_data (cputx_cpu_wr_data),
     .cpu_tx_buffer_wr_en   (cputx_cpu_wr_en),
-    .cpu_tx_size           (cputx_cpu_size),
-    .cpu_tx_ready          (cputx_cpu_packet_ready),
-    .cpu_tx_done           (cputx_cpu_packet_ack),
+    .cpu_tx_size           (cpu_tx_size),
+    .cpu_tx_ready          (cpu_tx_packet_ready),
+    .cpu_tx_done           (cpu_tx_packet_ack),
   /* PHY Status/Control */
-    .phy_status  (phy_status),
-    .phy_control (phy_control)
+    .phy_status   (phy_status),
+    .phy_control  (phy_control)
   );
 
 /*** buffer size clock domain crossing ***/
@@ -222,22 +228,24 @@ module gbe_udp #(
   /* CPU buffer TX logic signals */
   wire [10:0] cputx_tx_addr;
   wire  [7:0] cputx_tx_rd_data;
-  wire        cpurx_tx_buffer_sel;
+  wire        cpu_tx_buffer_sel;
+  wire        cpu_tx_buffer_sel_unstable;
 
   gbe_tx #(
     .LARGE_PACKETS (TX_LARGE_PACKETS)
   ) gbe_tx_inst (
-    .app_clk      (app_clk),
-    .app_rst      (app_tx_rst),
-    .app_data     (app_tx_data),
-    .app_dvld     (app_tx_dvld),
-    .app_eof      (app_tx_eof),
-    .app_ip       (app_tx_destip),
-    .app_port     (app_tx_destport),
-    .app_afull    (app_tx_afull),
-    .app_overflow (app_tx_overflow),
+    .app_clk         (app_clk),
+    .app_rst         (app_tx_rst),
+    .app_data        (app_tx_data),
+    .app_dvld        (app_tx_dvld),
+    .app_eof         (app_tx_eof),
+    .app_destip      (app_tx_destip),
+    .app_destport    (app_tx_destport),
+    .app_afull       (app_tx_afull),
+    .app_overflow    (app_tx_overflow),
 
-    .mac_tx_clk   (mac_tx_clk),
+    .mac_clk      (mac_tx_clk),
+    .mac_rst      (mac_tx_rst),
     .mac_tx_data  (mac_tx_data),
     .mac_tx_dvld  (mac_tx_dvld),
     .mac_tx_ack   (mac_tx_ack),
@@ -248,24 +256,24 @@ module gbe_udp #(
     .local_port    (local_port),
     .local_gateway (local_gateway),
 
-    .arp_cache_index (arp_tx_cache_index),
-    .arp_cache_data  (arp_tx_cache_rd_data),
+    .arp_cache_addr    (arp_tx_cache_index),
+    .arp_cache_rd_data (arp_tx_cache_rd_data),
 
-    .cpu_addr        (cputx_tx_addr),
-    .cpu_data        (cputx_tx_rd_data),
-    .cpu_size        (cpu_tx_size_stable),
-    .cpu_ready       (cpu_tx_packet_ready_stable),
-    .cpu_ack         (cpu_tx_packet_ack_unstable)
-    .cpu_buffer_sel  (cpurx_tx_buffer_sel)
+    .cpu_tx_buffer_addr    (cputx_tx_addr),
+    .cpu_tx_buffer_rd_data (cputx_tx_rd_data),
+    .cpu_tx_size           (cpu_tx_size_stable),
+    .cpu_tx_ready          (cpu_tx_packet_ready_stable),
+    .cpu_tx_done           (cpu_tx_packet_ack_unstable),
+    .cpu_buffer_sel        (cpu_tx_buffer_sel_unstable)
   );
 
   reg cpu_tx_buffer_selR;
   reg cpu_tx_buffer_selRR;
   always @(posedge wb_clk_i) begin
-    cpu_tx_buffer_selR  <= cpurx_tx_buffer_sel;
-    cpu_tx_buffer_selRR <= cpurx_tx_buffer_selR;
+    cpu_tx_buffer_selR  <= cpu_tx_buffer_sel_unstable;
+    cpu_tx_buffer_selRR <= cpu_tx_buffer_selR;
   end
-  assign cputx_cpu_buffer_sel = cpu_tx_buffer_selRR;
+  assign cpu_tx_buffer_sel = cpu_tx_buffer_selRR;
 
 /****** RX Logic ******/
 
@@ -273,50 +281,51 @@ module gbe_udp #(
   wire [10:0] cpurx_rx_addr;
   wire  [7:0] cpurx_rx_wr_data;
   wire        cpurx_rx_wr_en;
-  wire        cpurx_rx_buffer_sel;
+  wire        cpu_rx_buffer_sel;
+  wire        cpu_rx_buffer_sel_unstable;
 
   gbe_rx #(
     .DIST_RAM (RX_DIST_RAM)
-  ) gbe_tx_inst (
+  ) gbe_rx_inst (
     .app_clk      (app_clk),
     .app_rst      (app_rx_rst),
     .app_data     (app_rx_data),
     .app_dvld     (app_rx_dvld),
     .app_ack      (app_rx_ack),
     .app_eof      (app_rx_eof),
-    .app_ip       (app_rx_srcip),
-    .app_port     (app_rx_srcport),
+    .app_srcip    (app_rx_srcip),
+    .app_srcport  (app_rx_srcport),
     .app_badframe (app_rx_badframe),
+    .app_afull    (app_rx_afull),
     .app_overrun  (app_rx_overrun),
 
-    .mac_rx_clk    (mac_rx_clk),
-    .mac_rx_data   (mac_rx_data),
-    .mac_rx_dvld   (mac_rx_dvld),
-    .mac_goodframe (mac_rx_goodframe),
-    .mac_badframe  (mac_rx_badframe),
+    .mac_clk          (mac_rx_clk),
+    .mac_rx_data      (mac_rx_data),
+    .mac_rx_dvld      (mac_rx_dvld),
+    .mac_rx_goodframe (mac_rx_goodframe),
+    .mac_rx_badframe  (mac_rx_badframe),
 
     .local_enable  (local_enable),
     .local_mac     (local_mac),
     .local_ip      (local_ip),
     .local_port    (local_port),
-    .local_gateway (local_gateway),
 
-    .cpu_addr       (cpurx_rx_addr);
-    .cpu_wr_data    (cpurx_rx_wr_data);
-    .cpu_wr_en      (cpurx_rx_wr_en);
+    .cpu_addr       (cpurx_rx_addr),
+    .cpu_wr_data    (cpurx_rx_wr_data),
+    .cpu_wr_en      (cpurx_rx_wr_en),
     .cpu_size       (cpu_rx_size_unstable),
     .cpu_ready      (cpu_rx_packet_ready_unstable),
     .cpu_ack        (cpu_rx_packet_ack_stable),
-    .cpu_buffer_sel (cpurx_rx_buffer_sel)
+    .cpu_buffer_sel (cpu_rx_buffer_sel_unstable)
   );
 
   reg cpu_rx_buffer_selR;
   reg cpu_rx_buffer_selRR;
   always @(posedge wb_clk_i) begin
-    cpu_rx_buffer_selR  <= cpurx_rx_buffer_sel;
-    cpu_rx_buffer_selRR <= cpurx_rx_buffer_selR;
+    cpu_rx_buffer_selR  <= cpu_rx_buffer_sel_unstable;
+    cpu_rx_buffer_selRR <= cpu_rx_buffer_selR;
   end
-  assign cpurx_cpu_buffer_sel = cpu_rx_buffer_selRR;
+  assign cpu_rx_buffer_sel = cpu_rx_buffer_selRR;
 
 /****** ARP Cache ******/
 
@@ -326,9 +335,7 @@ module gbe_udp #(
      we could quite comfortably use a 24 bit memory and time
      multiplex to make up 48 bits. */
 
-  arp_cache #(
-    .MEM_INIT (ARP_CACHE_INIT)
-  ) arp_cache_inst (
+  arp_cache arp_cache_inst (
     .clka  (wb_clk_i),
     .addra (arp_cpu_cache_index),
     .douta (arp_cpu_cache_rd_data),
@@ -339,7 +346,7 @@ module gbe_udp #(
     .addrb (arp_tx_cache_index),
     .doutb (arp_tx_cache_rd_data),
     .dinb  (48'b0),
-    .web   (1'b0),
+    .web   (1'b0)
   );
 
 /****** TX Buffer ******/
@@ -353,16 +360,16 @@ end else begin : enable_cpu_tx
 
   cpu_buffer cpu_buffer_tx(
     .clka  (wb_clk_i),
-    .addra ({cputx_cpu_buffer_sel, cputx_cpu_addr}),
+    .addra ({!cpu_tx_buffer_sel, cputx_cpu_addr}),
     .douta (cputx_cpu_rd_data),
     .dina  (cputx_cpu_wr_data),
-    .wea   (cputx_cpu_wr_en),
+    .wea   ({4{cputx_cpu_wr_en}}),
 
     .clkb  (mac_tx_clk),
-    .addrb ({cputx_tx_buffer_sel, cputx_tx_addr}),
+    .addrb ({cpu_tx_buffer_sel, cputx_tx_addr}),
     .doutb (cputx_tx_rd_data),
     .dinb  (8'b0),
-    .web   (1'b0),
+    .web   (1'b0)
   );
 end endgenerate
 
@@ -376,16 +383,16 @@ end else begin : enable_cpu_rx
 
   cpu_buffer cpu_buffer_rx(
     .clka  (wb_clk_i),
-    .addra ({cpurx_cpu_buffer_sel, cpurx_cpu_addr}),
+    .addra ({!cpu_rx_buffer_sel, cpurx_cpu_addr}),
     .douta (cpurx_cpu_rd_data),
     .dina  (32'b0),
-    .wea   (1'b0),
+    .wea   (4'b0),
 
     .clkb  (mac_rx_clk),
-    .addrb ({cpurx_rx_buffer_sel, cpurx_rx_addr}),
+    .addrb ({cpu_rx_buffer_sel, cpurx_rx_addr}),
     .doutb (),
     .dinb  (cpurx_rx_wr_data),
-    .web   (cpurx_rx_wr_en),
+    .web   ({1{cpurx_rx_wr_en}})
   );
 
 end endgenerate

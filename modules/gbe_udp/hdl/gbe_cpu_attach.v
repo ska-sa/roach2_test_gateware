@@ -5,7 +5,7 @@ module gbe_cpu_attach #(
     parameter LOCAL_PORT    = 16'hffff,
     parameter LOCAL_GATEWAY = 8'd0,
     parameter LOCAL_ENABLE  = 0,
-    parameter PHY_CONFIG    = 32'd0,
+    parameter PHY_CONFIG    = 32'd0
   )(
     //WB attachment
     input         wb_clk_i,
@@ -15,10 +15,10 @@ module gbe_cpu_attach #(
     input         wb_we_i,
     input  [31:0] wb_adr_i,
     input  [31:0] wb_dat_i,
-    input   [3:0] wb_stb_i,
+    input   [3:0] wb_sel_i,
     output [31:0] wb_dat_o,
     output        wb_err_o,
-    input         wb_ack_o
+    output        wb_ack_o,
     //local registers
     output        local_enable,
     output [47:0] local_mac,
@@ -33,7 +33,7 @@ module gbe_cpu_attach #(
     //rx_buffer bits
     output  [8:0] cpu_rx_buffer_addr,
     input  [31:0] cpu_rx_buffer_rd_data,
-    input   [7:0] cpu_rx_size,
+    input  [11:0] cpu_rx_size,
     output        cpu_rx_ack,
     input         cpu_rx_ready,
     //tx_buffer bits
@@ -41,7 +41,7 @@ module gbe_cpu_attach #(
     input  [31:0] cpu_tx_buffer_rd_data,
     output [31:0] cpu_tx_buffer_wr_data,
     output        cpu_tx_buffer_wr_en,
-    output  [7:0] cpu_tx_size,
+    output [11:0] cpu_tx_size,
     output        cpu_tx_ready,
     input         cpu_tx_done,
     //phy status
@@ -55,7 +55,7 @@ module gbe_cpu_attach #(
 
   wire  [3:0] cpu_sel   = wb_sel_i;
   wire        cpu_rnw   = !wb_we_i;
-  wire        cpu_trans = !wb_ack_i && wb_stb_i && wb_cyc_i; 
+  wire        cpu_trans = !wb_ack_o && wb_stb_i && wb_cyc_i; 
   wire [13:0] cpu_addr  = wb_adr_i[13:0];
   wire [31:0] cpu_din   = wb_dat_i;
 
@@ -111,14 +111,15 @@ module gbe_cpu_attach #(
 
   /* RX/TX Buffer Control regs */
 
-  reg [7:0] cpu_tx_size_reg;
-  reg       cpu_tx_ready_reg;
-  reg       cpu_rx_ack_reg;
+  reg [11:0] cpu_tx_size_reg;
+  reg        cpu_tx_ready_reg;
+  reg        cpu_rx_ack_reg;
   assign cpu_tx_size  = cpu_tx_size_reg;
   assign cpu_tx_ready = cpu_tx_ready_reg;
   assign cpu_rx_ack   = cpu_rx_ack_reg;
 
   reg cpu_wait;
+  reg cpu_ack;
   always @(posedge wb_clk_i) begin
     //strobes
     cpu_ack          <= 1'b0;
@@ -129,7 +130,7 @@ module gbe_cpu_attach #(
     /* When the udp wrapper has sent the packet we tell the user by clearing 
        the size register */
     if (cpu_tx_done) begin
-      cpu_tx_size_reg  <= 8'd0;
+      cpu_tx_size_reg  <= 12'd0;
       cpu_tx_ready_reg <= 1'b0;
     end
 
@@ -147,14 +148,13 @@ module gbe_cpu_attach #(
       local_port_reg    <= LOCAL_PORT;
       local_enable_reg  <= LOCAL_ENABLE;
 
-      cpu_tx_size_reg   <= 8'd0;
+      cpu_tx_size_reg   <= 12'd0;
 
       cpu_rx_ack_reg    <= 1'b0;
 
-      /* TODO: finalize this */
-      phy_control <= 32'b0;
+      phy_control_reg   <= PHY_CONFIG;
 
-      cpu_wait <= 1'b0;
+      cpu_wait          <= 1'b0;
 
     end else if (cpu_wait) begin
       cpu_wait <= 1'b0;
@@ -232,8 +232,11 @@ module gbe_cpu_attach #(
                 cpu_rx_ack_reg <= 1'b1;
               end
               if (cpu_sel[2]) begin
-                cpu_tx_size_reg  <= cpu_din[23:16];
+                cpu_tx_size_reg[7:0]  <= cpu_din[23:16];
                 cpu_tx_ready_reg <= 1'b1;
+              end
+              if (cpu_sel[3]) begin
+                cpu_tx_size_reg[11:8]  <= cpu_din[27:24];
               end
             end
             REG_VALID_PORTS: begin
@@ -320,7 +323,7 @@ module gbe_cpu_attach #(
                              cpu_data_src == REG_LOCAL_MAC_0   ? local_mac[31:0] :
                              cpu_data_src == REG_LOCAL_GATEWAY ? {24'b0, local_gateway} :
                              cpu_data_src == REG_LOCAL_IPADDR  ? local_ip[31:0] :
-                             cpu_data_src == REG_BUFFER_SIZES  ? {8'b0, cpu_tx_size, 8'b0, cpu_rx_ack ? 8'b0 : cpu_rx_size} :
+                             cpu_data_src == REG_BUFFER_SIZES  ? {4'b0, cpu_tx_size, {4'b0, cpu_rx_ack ? 12'b0 : cpu_rx_size}} :
                              cpu_data_src == REG_VALID_PORTS   ? {8'b0, 7'b0, local_enable, local_port} :
                              cpu_data_src == REG_PHY_STATUS    ? phy_status :
                              cpu_data_src == REG_PHY_CONTROL   ? phy_control :
