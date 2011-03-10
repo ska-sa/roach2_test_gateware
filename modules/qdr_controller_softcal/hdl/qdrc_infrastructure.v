@@ -61,12 +61,22 @@ module qdrc_infrastructure(
    * The clock uses clk0 while all other signals use clk270.
    */
 
+  wire qdr_k_obuf;
+  wire qdr_k_n_obuf;
+
+  OBUF #(
+    .IOSTANDARD ("HSTL_I")
+  ) obuf_qdr_k[1:0] (
+    .I ({qdr_k_obuf, qdr_k_n_obuf}),
+    .O ({qdr_k, qdr_k_n})
+  );
+
   ODDR #(
     .DDR_CLK_EDGE ("SAME_EDGE"),
     .INIT         (1'b1),
     .SRTYPE       ("SYNC")
   ) ODDR_qdr_k (
-    .Q  (qdr_k),
+    .Q  (qdr_k_obuf),
     .C  (clk0),
     .CE (1'b1),
     .D1 (1'b1), //Rising Edge
@@ -81,7 +91,7 @@ module qdrc_infrastructure(
     .INIT         (1'b1),
     .SRTYPE       ("SYNC")
   ) ODDR_qdr_k_n (
-    .Q  (qdr_k_n),
+    .Q  (qdr_k_n_obuf),
     .C  (clk0),
     .CE (1'b1),
     .D1 (1'b0), //Rising Edge
@@ -132,22 +142,30 @@ module qdrc_infrastructure(
     qdr_r_n_iob       <= qdr_r_n_reg0;
   end
 
-  OBUF OBUF_addr[ADDR_WIDTH - 1:0](
+  OBUF #(
+    .IOSTANDARD("HSTL_I")
+  ) OBUF_addr[ADDR_WIDTH - 1:0](
     .I (qdr_sa_iob),
     .O (qdr_sa)
   );
 
-  OBUF OBUF_w_n(
+  OBUF #(
+    .IOSTANDARD("HSTL_I")
+  ) OBUF_w_n(
     .I (qdr_w_n_iob),
     .O (qdr_w_n)
   );
 
-  OBUF OBUF_r_n(
+  OBUF #(
+    .IOSTANDARD("HSTL_I")
+  ) OBUF_r_n(
     .I (qdr_r_n_iob),
     .O (qdr_r_n)
   );
 
-  OBUF OBUF_dll_off_n(
+  OBUF #(
+    .IOSTANDARD("HSTL_I")
+  ) OBUF_dll_off_n(
     .I (qdr_dll_off_n_buf),
     .O (qdr_dll_off_n)
   );
@@ -191,12 +209,20 @@ module qdrc_infrastructure(
     qdr_d_fall_reg     <= qdr_d_fall_reg1;
   end
 
+  wire [DATA_WIDTH - 1:0] qdr_d_obuf;
+  OBUF #(
+    .IOSTANDARD ("HSTL_I")
+  ) obuf_qdrd [DATA_WIDTH - 1:0] (
+    .O (qdr_d),
+    .I (qdr_d_obuf)
+  );
+
   ODDR #(
     .DDR_CLK_EDGE ("SAME_EDGE"),
     .INIT         (1'b1),
     .SRTYPE       ("SYNC")
   ) ODDR_qdr_d [DATA_WIDTH - 1:0] (
-    .Q  (qdr_d),
+    .Q  (qdr_d_obuf),
     .C  (clk270),
     .CE (1'b1),
     .D1 (qdr_d_rise_reg), //Rising Edge
@@ -212,7 +238,9 @@ module qdrc_infrastructure(
   wire [DATA_WIDTH - 1:0] qdr_q_ibuf;
   wire [DATA_WIDTH - 1:0] qdr_q_iodelay;
 
-  IBUF ibuf_qdrq [DATA_WIDTH - 1:0](
+  IBUF #(
+    .IOSTANDARD ("HSTL_I_DCI")
+  ) ibuf_qdrq [DATA_WIDTH - 1:0] (
     .I (qdr_q),
     .O (qdr_q_ibuf)
   );

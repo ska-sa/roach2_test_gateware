@@ -2,14 +2,13 @@
 module toplevel(
     input          sys_clk_n,
     input          sys_clk_p,
-    /*
+
     input          aux_clk_n,
     input          aux_clk_p,
     input          aux_synci_n,
     input          aux_synci_p,
     output         aux_synco_n,
     output         aux_synco_p,
-    */
 
     inout   [11:0] v6_gpio,
 
@@ -24,9 +23,7 @@ module toplevel(
     output         ppc_prdy,
     output         ppc_doen,
 
-    output         ppc_irqn,
-
-    /*
+    output         v6_irqn,
 
     output         ddr3_ck_n,
     output         ddr3_ck_p,
@@ -40,12 +37,9 @@ module toplevel(
     output         ddr3_rasn,
     output         ddr3_casn,
     output         ddr3_wen,
-    output         ddr3_cke0,
-    output         ddr3_cke1,
-    output         ddr3_odt0,
-    output         ddr3_odt1,
+    output   [1:0] ddr3_cke,
+    output   [1:0] ddr3_odt,
     output         ddr3_resetn,
-    */
 
     output         qdr0_k,
     output         qdr0_kn,
@@ -147,6 +141,39 @@ module toplevel(
     .rate (knight_rider_speed)
   );
 
+  wire aux_clk;
+  IBUFGDS #(
+    .IOSTANDARD("LVDS_25"),
+    .DIFF_TERM("TRUE")
+  ) ibufgds_aux_clk (
+    .I (aux_clk_p),
+    .IB(aux_clk_n),
+    .O (aux_clk)
+  );
+  
+  wire aux_synci;
+  IBUFDS #(
+    .IOSTANDARD("LVDS_25"),
+    .DIFF_TERM("TRUE")
+  ) ibufds_aux_synci (
+    .I (aux_synci_p),
+    .IB(aux_synci_n),
+    .O (aux_synci)
+  );
+  
+  wire aux_synco;
+  OBUFDS #(
+    .IOSTANDARD("LVDS_25")
+  ) obufds_aux_synco (
+    .O (aux_synco_p),
+    .OB(aux_synco_n),
+    .I (aux_synco)
+  );
+  assign aux_synco = sys_clk;
+
+  assign v6_gpio[8] = aux_synci;
+  assign v6_gpio[11] = aux_clk;
+
   wire        wb_clk_i;
   wire        wb_rst_i;
   wire        wbm_cyc_o;
@@ -178,8 +205,8 @@ module toplevel(
 
   OBUF #(
     .IOSTANDARD("LVCMOS25")
-  ) OBUF_ppc_irqn (
-    .O (ppc_irqn),
+  ) OBUF_v6_irqn (
+    .O (v6_irqn),
     .I (1'b0)
   );
 
@@ -492,6 +519,7 @@ module toplevel(
     .clk0     (qdr_clk0),
     .clk180   (qdr_clk180),
     .clk270   (qdr_clk270),
+    .clkdiv2  (),
     .pll_lock (qdr_pll_lock)
   );
 
@@ -819,36 +847,144 @@ module toplevel(
     .phy_rdy     (qdr3_phy_rdy),
     .cal_fail    (qdr3_cal_fail)
   );
+
+/*********** DRAM *************/
+
+  wire ddr3_clk_mem;
+  wire ddr3_clk_div2;
+  wire ddr3_rst_div2;
+
+  wire ddr3_pll_lock;
+
+  clk_gen #(
+    .CLK_FREQ (250)
+  ) clk_gen_ddr3 (
+    .clk_100  (sys_clk),
+    .reset    (sys_rst),
+    .clk0     (ddr3_clk_mem),
+    .clk180   (),
+    .clk270   (),
+    .clkdiv2  (ddr3_clk_div2),
+    .pll_lock (ddr3_pll_lock)
+  );
+
+  reg ddr3_rstR;
+  reg ddr3_rstRR;
+
+  always @(posedge ddr3_clk_div2) begin
+    ddr3_rstR  <= sys_rst || !ddr3_pll_lock || !idelay_rdy;
+    ddr3_rstRR <= ddr3_rstR;
+  end
+  assign ddr3_rst_div2 = ddr3_rstRR;
+
+  wire             ddr3_phy_rdy;
+  wire             ddr3_cal_fail;
+  wire [144*2-1:0] ddr3_app_rd_data;
+  wire             ddr3_app_rd_data_end;
+  wire             ddr3_app_rd_data_valid;
+  wire             ddr3_app_rdy;
+  wire             ddr3_app_wdf_rdy;
+  wire      [31:0] ddr3_app_addr;
+  wire       [2:0] ddr3_app_cmd;
+  wire             ddr3_app_en;
+  wire [144*2-1:0] ddr3_app_wdf_data;
+  wire             ddr3_app_wdf_end;
+  wire  [18*2-1:0] ddr3_app_wdf_mask;
+  wire             ddr3_app_wdf_wren;
+
+  ddr3_controller #(
+    .tCK           (4000),
+    .RANK_WIDTH    (1),
+    .BANK_WIDTH    (3),
+    .CK_WIDTH      (1),
+    .CKE_WIDTH     (1),
+    .COL_WIDTH     (10),
+    .CS_WIDTH      (1),
+    .DM_WIDTH      (9),
+    .DQ_WIDTH      (72),
+    .DQS_WIDTH     (9),
+    .ROW_WIDTH     (15),
+    .tPRDI         (1_000_000),
+    .tREFI         (7800000),
+    .ZQI           (512),
+    .ADDR_WIDTH    (29),
+    .DATA_WIDTH    (72)
+  ) ddr3_controller_inst (
+    .clk_mem           (ddr3_clk_mem),
+    .clk_div2          (ddr3_clk_div2),
+    .rst_div2          (ddr3_rst_div2),
+
+    .ddr3_dq           (ddr3_dq),
+    .ddr3_addr         (ddr3_a),
+    .ddr3_ba           (ddr3_ba),
+    .ddr3_ras_n        (ddr3_rasn),
+    .ddr3_cas_n        (ddr3_casn),
+    .ddr3_we_n         (ddr3_wen),
+    .ddr3_reset_n      (ddr3_resetn),
+    .ddr3_cs_n         (ddr3_sn[0]),
+    .ddr3_odt          (ddr3_odt[1:0]),
+    .ddr3_cke          (ddr3_cke[1:0]),
+    .ddr3_dm           (ddr3_dm),
+    .ddr3_dqs_p        (ddr3_dqs_p),
+    .ddr3_dqs_n        (ddr3_dqs_n),
+    .ddr3_ck_p         (ddr3_ck_p),
+    .ddr3_ck_n         (ddr3_ck_n),
+
+    .phy_rdy           (ddr3_phy_rdy),
+    .cal_fail          (ddr3_cal_fail),
+
+    .app_rd_data       (ddr3_app_rd_data),
+    .app_rd_data_end   (ddr3_app_rd_data_end),
+    .app_rd_data_valid (ddr3_app_rd_data_valid),
+    .app_rdy           (ddr3_app_rdy),
+    .app_wdf_rdy       (ddr3_app_wdf_rdy),
+    .app_addr          (ddr3_app_addr),
+    .app_cmd           (ddr3_app_cmd),
+    .app_en            (ddr3_app_en),
+    .app_wdf_data      (ddr3_app_wdf_data),
+    .app_wdf_end       (ddr3_app_wdf_end),
+    .app_wdf_mask      (ddr3_app_wdf_mask),
+    .app_wdf_wren      (ddr3_app_wdf_wren)
+  );
+
+  OBUF obuf_ddr3_sn[2:0](
+    .I (3'b1),
+    .O (ddr3_sn[3:1])
+  );
+
+  ddr3_cpu_interface ddr3_cpu_interface_inst(
+    .wb_clk_i    (wb_clk_i),
+    .wb_rst_i    (wb_rst_i),
+    .wb_cyc_i    (wbs_cyc_o[DRAM_SLI]),
+    .wb_stb_i    (wbs_stb_o[DRAM_SLI]),
+    .wb_we_i     (wbs_we_o),
+    .wb_sel_i    (wbs_sel_o),
+    .wb_adr_i    (wbs_adr_o),
+    .wb_dat_i    (wbs_dat_o),
+    .wb_dat_o    (wbs_dat_i[(DRAM_SLI+1)*32-1:(DRAM_SLI)*32]),
+    .wb_ack_o    (wbs_ack_i[DRAM_SLI]),
+    .wb_err_o    (wbs_err_i[DRAM_SLI]),
+
+    .ddr3_clk    (ddr3_clk_div2),
+    .ddr3_rst    (ddr3_rst_div2),
+
+    .phy_rdy     (ddr3_phy_rdy),
+    .cal_fail    (ddr3_cal_fail),
+
+    .app_rdy           (ddr3_app_rdy),
+    .app_en            (ddr3_app_en),
+    .app_cmd           (ddr3_app_cmd),
+    .app_addr          (ddr3_app_addr),
+    .app_wdf_data      (ddr3_app_wdf_data),
+    .app_wdf_end       (ddr3_app_wdf_end),
+    .app_wdf_mask      (ddr3_app_wdf_mask),
+    .app_wdf_wren      (ddr3_app_wdf_wren),
+    .app_wdf_rdy       (ddr3_app_wdf_rdy),
+    .app_rd_data       (ddr3_app_rd_data),
+    .app_rd_data_end   (ddr3_app_rd_data_end),
+    .app_rd_data_valid (ddr3_app_rd_data_valid)
+  );
   
-//wire aux_clk;
-//IBUFGDS #(
-//  .IOSTANDARD("LVDS_25"),
-//  .DIFF_TERM("TRUE")
-//) ibufgds_aux_clk (
-//  .I (aux_clk_p),
-//  .IB(aux_clk_n),
-//  .O (aux_clk)
-//);
-//
-//wire aux_synci;
-//IBUFDS #(
-//  .IOSTANDARD("LVDS_25"),
-//  .DIFF_TERM("TRUE")
-//) ibufds_aux_synci (
-//  .I (aux_synci_p),
-//  .IB(aux_synci_n),
-//  .O (aux_synci)
-//);
-//
-//wire aux_synco;
-//OBUFDS #(
-//  .IOSTANDARD("LVDS_25")
-//) obufds_aux_synco (
-//  .O (aux_synco_p),
-//  .OB(aux_synco_n),
-//  .I (aux_synco)
-//);
-//assign aux_synco = aux_synci;
 //
 //wire [11:0] gpio_bufi;
 //wire [11:0] gpio_bufo;
@@ -1224,139 +1360,7 @@ module toplevel(
 //assign qdr3_k_buf     = qdr3_q_buf[0];
 //assign qdr3_kn_buf    = qdr3_q_buf[0];
 //
-///*************** DDR3 **************/
-//
-//wire ddr3_ck_buf;
-//OBUFDS #(
-//  .IOSTANDARD("DIFF_SSTL15")
-//) OBUFDS_ddr3_ck (
-//  .I  (ddr3_ck_buf),
-//  .O  (ddr3_ck_p),
-//  .OB (ddr3_ck_n)
-//);
-//
-//wire [8:0] ddr3_dm_buf;
-//OBUF #(
-//  .IOSTANDARD("SSTL15")
-//) OBUF_ddr3_dm[8:0] (
-//  .I (ddr3_dm_buf),
-//  .O (ddr3_dm)
-//);
-//
-//wire [71:0] ddr3_dq_bufi;
-//wire [71:0] ddr3_dq_bufo;
-//wire [71:0] ddr3_dq_bufoen;
-//
-//IOBUF #(
-//  .IOSTANDARD("SSTL15_T_DCI")
-//) IOBUF_ddr3_dq[71:0] (
-// .IO (ddr3_dq),
-// .O  (ddr3_dq_bufi),
-// .I  (ddr3_dq_bufo),
-// .T  (ddr3_dq_bufoen)
-//);
-//assign ddr3_dq_bufo   = ddr3_dq_bufi;
-//assign ddr3_dq_bufoen = ddr3_dq_bufi;
-//
-//wire [8:0] ddr3_dqs_bufi;
-//wire [8:0] ddr3_dqs_bufo;
-//wire [8:0] ddr3_dqs_bufoen;
-//
-//IOBUFDS #(
-//  .IOSTANDARD("DIFF_SSTL15_T_DCI")
-//) IOBUF_ddr3_dqs[8:0] (
-// .IO  (ddr3_dqs_p),
-// .IOB (ddr3_dqs_n),
-// .O  (ddr3_dqs_bufi),
-// .I  (ddr3_dqs_bufo),
-// .T  (ddr3_dqs_bufoen)
-//);
-//assign ddr3_dqs_bufo   = ddr3_dqs_bufi;
-//assign ddr3_dqs_bufoen = ddr3_dqs_bufi;
-//
-//wire [2:0] ddr3_ba_buf;
-//OBUF #(
-//  .IOSTANDARD("SSTL15")
-//) OBUF_ddr3_ba[2:0] (
-//  .I (ddr3_ba_buf),
-//  .O (ddr3_ba)
-//);
-//
-//wire [15:0] ddr3_a_buf;
-//OBUF #(
-//  .IOSTANDARD("SSTL15")
-//) OBUF_ddr3_a[15:0] (
-//  .I (ddr3_a_buf),
-//  .O (ddr3_a)
-//);
-//
-//wire [3:0] ddr3_sn_buf;
-//OBUF #(
-//  .IOSTANDARD("SSTL15")
-//) OBUF_ddr3_sn[3:0] (
-//  .I (ddr3_sn_buf),
-//  .O (ddr3_sn)
-//);
-//
-//wire ddr3_rasn_buf;
-//OBUF #(
-//  .IOSTANDARD("SSTL15")
-//) OBUF_ddr3_rasn (
-//  .I (ddr3_rasn_buf),
-//  .O (ddr3_rasn)
-//);
-//
-//wire ddr3_casn_buf;
-//OBUF #(
-//  .IOSTANDARD("SSTL15")
-//) OBUF_ddr3_casn (
-//  .I (ddr3_casn_buf),
-//  .O (ddr3_casn)
-//);
-//
-//wire ddr3_wen_buf;
-//OBUF #(
-//  .IOSTANDARD("SSTL15")
-//) OBUF_ddr3_wen (
-//  .I (ddr3_wen_buf),
-//  .O (ddr3_wen)
-//);
-//
-//wire [1:0] ddr3_cke_buf;
-//OBUF #(
-//  .IOSTANDARD("SSTL15")
-//) OBUF_ddr3_cke[1:0] (
-//  .I (ddr3_cke_buf),
-//  .O ({ddr3_cke1, ddr3_cke0})
-//);
-//wire [1:0] ddr3_odt_buf;
-//OBUF #(
-//  .IOSTANDARD("SSTL15")
-//) OBUF_ddr3_odt[1:0] (
-//  .I (ddr3_odt_buf),
-//  .O ({ddr3_odt1, ddr3_odt0})
-//);
-//
-//wire ddr3_resetn_buf;
-//OBUF #(
-//  .IOSTANDARD("SSTL15")
-//) OBUF_ddr3_resetn (
-//  .I (ddr3_resetn_buf),
-//  .O (ddr3_resetn)
-//);
-//
-//assign ddr3_resetn_buf = ddr3_dq_bufi[0:0];
-//assign ddr3_odt_buf    = ddr3_dq_bufi[1:0];
-//assign ddr3_cke_buf    = ddr3_dq_bufi[1:0];
-//assign ddr3_wen_buf    = ddr3_dq_bufi[0:0];
-//assign ddr3_casn_buf   = ddr3_dq_bufi[0:0];
-//assign ddr3_rasn_buf   = ddr3_dq_bufi[0:0];
-//assign ddr3_sn_buf     = ddr3_dq_bufi[3:0];
-//assign ddr3_a_buf      = ddr3_dq_bufi[15:0];
-//assign ddr3_ba_buf     = ddr3_dq_bufi[2:0];
-//assign ddr3_dm_buf     = ddr3_dq_bufi[8:0];
-//assign ddr3_ck_buf     = ddr3_dq_bufi[0:0];
-//
+
 ///*********** MGT GPIO ************/
 //wire [11:0] mgt_gpio_bufi;
 //wire [11:0] mgt_gpio_bufo;
@@ -1642,9 +1646,6 @@ module toplevel(
     .sgmii_loopback     (1'b0),
     .sgmii_powerdown    (1'b0)
   );
-
-  assign v6_gpio[8] = clk_125;
-  assign v6_gpio[11] = recclk_125;
 
   // MAC interface
   wire       mac_rx_clk;
