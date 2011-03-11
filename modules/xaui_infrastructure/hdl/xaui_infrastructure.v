@@ -1,6 +1,6 @@
-module #(
+module xaui_infrastructure #(
     parameter ENABLE_MASK = 8'b1111_1111
-  ) xaui_infrastructure (
+  ) (
     input             mgt_reset,
 
     input       [2:0] xaui_refclk_n,
@@ -37,8 +37,9 @@ module #(
     input   [8*5-1:0] mgt_txpostemphasis,
     input   [8*4-1:0] mgt_txpreemphasis,
     input   [8*4-1:0] mgt_txdiffctrl,
-    input   [8*3-1:0] mgt_rxeqmix
+    input   [8*3-1:0] mgt_rxeqmix,
 
+    output [8*16-1:0] mgt_status
   );
 
   wire [2:0] gtx_refclk;
@@ -49,7 +50,7 @@ module #(
     .IB    (xaui_refclk_n),
     .CEB   (1'b0),
     .O     (gtx_refclk),
-    .ODIV2 (),
+    .ODIV2 ()
   );
 
   wire gtx_clk_o;
@@ -61,9 +62,11 @@ module #(
 
   wire [2:0] gtx_refclk_bufr;
 
-  BUFR bufg_xaui_clk[2:0](
-    .I (gtx_refclk),
-    .O (gtx_refclk_bufr)
+  BUFR bufr_gtx_refclk[2:0](
+    .I   (gtx_refclk),
+    .O   (gtx_refclk_bufr),
+    .CE  (1'b1),
+    .CLR (1'b0)
   );
 
   /* synchronize pma reset to local gtx_refclk_bufr domain */
@@ -117,9 +120,9 @@ module #(
   wire [8*4-1:0] tx_resetdone;
 
   genvar I;
-generate for (I=0; I < 7; I=I+1) begin : gtx_wrap_gen
+generate for (I=0; I < 8; I=I+1) begin : gtx_wrap_gen
 
-  xaui_quad_wrapper xaui_guad_inst (
+  gtx_quad gtx_quad_inst (
     //---------------------- Loopback and Powerdown Ports ----------------------
     .LOOPBACK_IN                    (mgt_loopback[I]),
     .RXPOWERDOWN_IN                 (mgt_powerdown[I]),
@@ -130,18 +133,18 @@ generate for (I=0; I < 7; I=I+1) begin : gtx_wrap_gen
     .RXDISPERR_OUT                  (mgt_rxdisperror[I*8+:8]),
     .RXNOTINTABLE_OUT               (mgt_rxnotintable[I*8+:8]),
     //------------- Receive Ports - Comma Detection and Alignment --------------
-    .RXENMCOMMAALIGN_IN             (mgt_rxencommaalign[I*8+:8]),
-    .RXENPCOMMAALIGN_IN             (mgt_rxencommaalign[I*8+:8]),
+    .RXENMCOMMAALIGN_IN             (mgt_rxencommaalign[I*4+:4]),
+    .RXENPCOMMAALIGN_IN             (mgt_rxencommaalign[I*4+:4]),
 
     .RXENCHANSYNC_IN                (mgt_rxenchansync[I]),
     //----------------- Receive Ports - RX Data Path interface -----------------
-    .RXDATA_OUT                     (mgt_txdata[I*64+:64]),
+    .RXDATA_OUT                     (mgt_rxdata[I*64+:64]),
     .RXRESET_IN                     (gtx_rx_reset),
     .RXUSRCLK2_IN                   (xaui_clk),
     //----- Receive Ports - RX Driver,OOB signalling,Coupling and Eq.,CDR ------
     .RXCDRRESET_IN                  (pma_reset_map[I]),
     .RXELECIDLE_OUT                 (mgt_rxelecidle[I*4+:4]),
-    .RXEQMIX_IN                     (mgt_rxeqmix[I*3+:3),
+    .RXEQMIX_IN                     (mgt_rxeqmix[I*3+:3]),
     .RXN_IN                         (mgt_rx_n[I*4+:4]),
     .RXP_IN                         (mgt_rx_p[I*4+:4]),
     //------ Receive Ports - RX Elastic Buffer and Phase Alignment Ports -------
@@ -155,10 +158,10 @@ generate for (I=0; I < 7; I=I+1) begin : gtx_wrap_gen
     .PLLRXRESET_IN                  (pma_reset_map[I]),
     .RXPLLLKDET_OUT                 (mgt_rxlock[I*4+:4]),
     .RXRESETDONE_OUT                (rx_resetdone[I*4+:4]),
-    //-------------- Transmit Ports - 8b10b Encoder Control Ports --------------
-    .TXCHARISK_IN                   (mgt_txcharisk[I*8+:8]),
     //---------------- Transmit Ports - TX Data Path interface -----------------
-    .TXDATA_IN                      (mgt_txcharisk(I*64+:64]),
+    .TXCHARISK_IN                   (mgt_txcharisk[I*8+:8]),
+    .TXDATA_IN                      (mgt_txdata[I*64+:64]),
+
     .TXOUTCLK_OUT                   (gtxclk_out_map[I*4+:4]),        
     .TXRESET_IN                     (gtx_tx_reset),
     .TXUSRCLK2_IN                   (xaui_clk),
@@ -170,16 +173,18 @@ generate for (I=0; I < 7; I=I+1) begin : gtx_wrap_gen
     //------------- Transmit Ports - TX Driver and OOB signalling --------------
     .TXPREEMPHASIS_IN               (mgt_txpreemphasis[I*4+:4]),
     //--------------------- Transmit Ports - TX PLL Ports ----------------------
-    .GTXTXRESET_IN                  (pma_reset),
+    .GTXTXRESET_IN                  (pma_reset_map[I]),
     .MGTREFCLKTX_IN                 (gtx_refclk_map[I]),
     .PLLTXRESET_IN                  (1'b0),
-    .TXRESETDONE_OUT                (tx_reset_done[I*4+:4])
+    .TXRESETDONE_OUT                (tx_resetdone[I*4+:4])
   );
 
   assign mgt_rxsyncok[I*4+:4] = {rxlossofsync[I*8+7],
                                  rxlossofsync[I*8+5],
                                  rxlossofsync[I*8+3],
                                  rxlossofsync[I*8+1]};
+
+  assign mgt_status[I*16+:16] = {4'b0, mgt_rxbufferr[I*4+:4], 4'b0, mgt_rxelecidle[I*4+:4]};
 end endgenerate
 
   /* Which pma resets and gtx_refclks go where */

@@ -1,3 +1,4 @@
+`include "parameters.v"
 `include "mem_layout.v"
 module toplevel(
     input          sys_clk_n,
@@ -88,17 +89,6 @@ module toplevel(
     inout   [37:0] zdok1_dp_p,
 
     /*
-
-    inout   [11:0] mgt_gpio,
-    output  [31:0] mgt_tx_n,
-    output  [31:0] mgt_tx_p,
-    input   [31:0] mgt_rx_n,
-    input   [31:0] mgt_rx_p,
-
-    input    [2:0] xaui_clkref_n,
-    input    [2:0] xaui_clkref_p,
-    input    [2:0] misc_clkref_n,
-    input    [2:0] misc_clkref_p,
     input    [7:0] ext_refclk_p,
     input    [7:0] ext_refclk_n,
     */
@@ -108,7 +98,17 @@ module toplevel(
     output         sgmii_tx_n,
     output         sgmii_tx_p,
     input          sgmii_clkref_n,
-    input          sgmii_clkref_p
+    input          sgmii_clkref_p,
+
+    inout   [11:0] mgt_gpio,
+
+    output  [31:0] mgt_tx_n,
+    output  [31:0] mgt_tx_p,
+    input   [31:0] mgt_rx_n,
+    input   [31:0] mgt_rx_p,
+
+    input    [2:0] xaui_refclk_n,
+    input    [2:0] xaui_refclk_p
   );
   
   // Make sure clk_125 is not renamed
@@ -534,6 +534,7 @@ module toplevel(
 
   /************************ QDR 0 ****************************/
 
+`ifdef ENABLE_QDR
   wire [31:0] qdr0_app_addr;
   wire        qdr0_app_wr_en;
   wire [71:0] qdr0_app_wr_data;
@@ -610,9 +611,27 @@ module toplevel(
     .phy_rdy     (qdr0_phy_rdy),
     .cal_fail    (qdr0_cal_fail)
   );
+`else
+  OBUF #(
+    .IOSTANDARD("LVCMOS15")
+  ) qdr0_obuf [61:0] (
+    .I (62'b0),
+    .O ({qdr0_k, qdr0_kn, qdr0_rdn, qdr0_wrn, qdr0_a, qdr0_d, qdr0_doffn})
+  );
+
+  wire [35:0] qdr0_q_noreduce;
+  //synthesis attribute NOREDUCE of qdr0_q_noreduce is TRUE
+  IBUF #(
+    .IOSTANDARD("LVCMOS15")
+  ) qdr0_ibuf [35:0] (
+    .I (qdr0_q),
+    .O (qdr0_q_noreduce)
+  );
+`endif
 
   /************************ QDR 1 ****************************/
 
+`ifdef ENABLE_QDR
   wire [31:0] qdr1_app_addr;
   wire        qdr1_app_wr_en;
   wire [71:0] qdr1_app_wr_data;
@@ -689,8 +708,26 @@ module toplevel(
     .phy_rdy     (qdr1_phy_rdy),
     .cal_fail    (qdr1_cal_fail)
   );
+`else
+  OBUF #(
+    .IOSTANDARD("LVCMOS15")
+  ) qdr1_obuf [61:0] (
+    .I (62'b0),
+    .O ({qdr1_k, qdr1_kn, qdr1_rdn, qdr1_wrn, qdr1_a, qdr1_d, qdr1_doffn})
+  );
+
+  wire [35:0] qdr1_q_noreduce;
+  //synthesis attribute NOREDUCE of qdr1_q_noreduce is TRUE
+  IBUF #(
+    .IOSTANDARD("LVCMOS15")
+  ) qdr1_ibuf [35:0] (
+    .I (qdr1_q),
+    .O (qdr1_q_noreduce)
+  );
+`endif
 
   /************************ QDR 2 ****************************/
+`ifdef ENABLE_QDR
 
   wire [31:0] qdr2_app_addr;
   wire        qdr2_app_wr_en;
@@ -768,8 +805,26 @@ module toplevel(
     .phy_rdy     (qdr2_phy_rdy),
     .cal_fail    (qdr2_cal_fail)
   );
+`else
+  OBUF #(
+    .IOSTANDARD("LVCMOS15")
+  ) qdr2_obuf [61:0] (
+    .I (62'b0),
+    .O ({qdr2_k, qdr2_kn, qdr2_rdn, qdr2_wrn, qdr2_a, qdr2_d, qdr2_doffn})
+  );
+
+  wire [35:0] qdr2_q_noreduce;
+  //synthesis attribute NOREDUCE of qdr2_q_noreduce is TRUE
+  IBUF #(
+    .IOSTANDARD("LVCMOS15")
+  ) qdr2_ibuf [35:0] (
+    .I (qdr2_q),
+    .O (qdr2_q_noreduce)
+  );
+`endif
 
   /************************ QDR 3 ****************************/
+`ifdef ENABLE_QDR
 
   wire [31:0] qdr3_app_addr;
   wire        qdr3_app_wr_en;
@@ -847,6 +902,23 @@ module toplevel(
     .phy_rdy     (qdr3_phy_rdy),
     .cal_fail    (qdr3_cal_fail)
   );
+`else
+  OBUF #(
+    .IOSTANDARD("LVCMOS15")
+  ) qdr3_obuf [61:0] (
+    .I (62'b0),
+    .O ({qdr3_k, qdr3_kn, qdr3_rdn, qdr3_wrn, qdr3_a, qdr3_d, qdr3_doffn})
+  );
+
+  wire [35:0] qdr3_q_noreduce;
+  //synthesis attribute NOREDUCE of qdr3_q_noreduce is TRUE
+  IBUF #(
+    .IOSTANDARD("LVCMOS15")
+  ) qdr3_ibuf [35:0] (
+    .I (qdr3_q),
+    .O (qdr3_q_noreduce)
+  );
+`endif
 
 /*********** DRAM *************/
 
@@ -876,6 +948,8 @@ module toplevel(
     ddr3_rstRR <= ddr3_rstR;
   end
   assign ddr3_rst_div2 = ddr3_rstRR;
+
+`ifdef ENABLE_DDR3
 
   wire             ddr3_phy_rdy;
   wire             ddr3_cal_fail;
@@ -984,591 +1058,192 @@ module toplevel(
     .app_rd_data_end   (ddr3_app_rd_data_end),
     .app_rd_data_valid (ddr3_app_rd_data_valid)
   );
-  
-//
-//wire [11:0] gpio_bufi;
-//wire [11:0] gpio_bufo;
-//wire [11:0] gpio_bufoen;
-//
-//IOBUF #(
-//  .IOSTANDARD("LVCMOS15")
-//) IOBUF_gpio[11:0] (
-//  .IO (v6_gpio),
-//  .I  (gpio_bufo),
-//  .O  (gpio_bufi),
-//  .T  (gpio_bufoen)
-//);
-//assign gpio_bufo   = {6{aux_clk}} | gpio_bufi;
-//assign gpio_bufoen = {6{sys_clk}} | gpio_bufi;
-//
-///*************** PPC Signals ****************/
-//wire ppc_perclk_buf;
-//IBUFG #(
-//  .IOSTANDARD("LVCMOS25")
-//) IBUFG_ppc_perclk (
-//  .I (ppc_perclk),
-//  .O (ppc_perclk_buf)
-//);
-//
-//wire [5:29] ppc_paddr_buf;
-//IBUF #(
-//  .IOSTANDARD("LVCMOS25")
-//) IBUF_ppc_paddr[5:29] (
-//  .I (ppc_paddr),
-//  .O (ppc_paddr_buf)
-//);
-//
-//wire [1:0] ppc_pcsn_buf;
-//IBUF #(
-//  .IOSTANDARD("LVCMOS25")
-//) IBUF_ppc_pcsn[1:0] (
-//  .I (ppc_pcsn),
-//  .O (ppc_pcsn_buf)
-//);
-//
-//wire [0:31] ppc_pdata_bufi;
-//wire [0:31] ppc_pdata_bufo;
-//wire [0:31] ppc_pdata_oen;
-//
-//IOBUF #(
-//  .IOSTANDARD("LVCMOS25")
-//) IOBUF_ppc_pdata[0:31] (
-//  .IO (ppc_pdata),
-//  .I (ppc_pdata_bufo),
-//  .O (ppc_pdata_bufi),
-//  .T (ppc_pdata_oen)
-//);
-//
-//wire [0:3] ppc_pben_buf;
-//IBUF #(
-//  .IOSTANDARD("LVCMOS25")
-//) IBUF_ppc_pben[0:3] (
-//  .I (ppc_pben),
-//  .O (ppc_pben_buf)
-//);
-//
-//wire ppc_poen_buf;
-//IBUF #(
-//  .IOSTANDARD("LVCMOS25")
-//) IBUF_ppc_poen (
-//  .I (ppc_poen),
-//  .O (ppc_poen_buf)
-//);
-//
-//wire ppc_pwrn_buf;
-//IBUF #(
-//  .IOSTANDARD("LVCMOS25")
-//) IBUF_ppc_pwrn (
-//  .I (ppc_pwrn),
-//  .O (ppc_pwrn_buf)
-//);
-//
-//wire ppc_pblastn_buf;
-//IBUF #(
-//  .IOSTANDARD("LVCMOS25")
-//) IBUF_ppc_pblastn (
-//  .I (ppc_pblastn),
-//  .O (ppc_pblastn_buf)
-//);
-//
-//wire ppc_prdy_buf;
-//OBUF #(
-//  .IOSTANDARD("LVCMOS25")
-//) OBUF_ppc_prdy (
-//  .O (ppc_prdy),
-//  .I (ppc_prdy_buf)
-//);
-//
-//wire ppc_doen_buf;
-//OBUF #(
-//  .IOSTANDARD("LVCMOS15")
-//) OBUF_ppc_doen (
-//  .O (ppc_doen),
-//  .I (ppc_doen_buf)
-//);
-//
-//wire ppc_irqn_buf;
-//OBUF #(
-//  .IOSTANDARD("LVCMOS25")
-//) OBUF_ppc_irqn (
-//  .O (ppc_irqn),
-//  .I (ppc_irqn_buf)
-//);
-//
-//assign ppc_pdata_bufo = ppc_pdata_bufi;
-//assign ppc_pdata_oen  = {ppc_paddr_buf, ppc_pcsn_buf, ppc_pben_buf, ppc_poen_buf};
-//assign ppc_prdy_buf = ppc_pblastn_buf;
-//assign ppc_doen_buf = ppc_pwrn_buf;
-//assign ppc_irqn_buf = ppc_perclk_buf;
-//
-///******************* ZDOKs ********************/
-//
-//wire [1:0] zdok0_clk;
-//IBUFGDS #(
-//  .IOSTANDARD("LVDS_25"),
-//  .DIFF_TERM("TRUE")
-//) IBUFGDS_zdok0_clk[1:0] (
-//  .I  ({zdok0_clk0_p, zdok0_clk1_p}),
-//  .IB ({zdok0_clk0_n, zdok0_clk1_n}),
-//  .O  (zdok0_clk)
-//);
-//
-//wire [37:0] zdok0_dp;
-//IBUFDS #(
-//  .IOSTANDARD("LVDS_25"),
-//  .DIFF_TERM("TRUE")
-//) IBUFDS_zdok0_dp[37:0] (
-//  .I  (zdok0_dp_p),
-//  .IB (zdok0_dp_n),
-//  .O  (zdok0_dp)
-//);
-//
-//wire [1:0] zdok1_clk;
-//OBUFDS #(
-//  .IOSTANDARD("LVDS_25")
-//) OBUFDS_zdok1_clk[1:0] (
-//  .O  ({zdok1_clk0_p, zdok1_clk1_p}),
-//  .OB ({zdok1_clk0_n, zdok1_clk1_n}),
-//  .I  (zdok0_clk)
-//);
-//
-//wire [37:0] zdok1_dp;
-//OBUFDS #(
-//  .IOSTANDARD("LVDS_25")
-//) OBUFDS_zdok1_dp[37:0] (
-//  .O  (zdok1_dp_p),
-//  .OB (zdok1_dp_n),
-//  .I  (zdok0_dp)
-//);
-//
-///* qdr 1 */
-//
-//wire qdr1_k_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr1_k (
-//  .I (qdr1_k_buf),
-//  .O (qdr1_k)
-//);
-//
-//wire qdr1_kn_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr1_kn (
-//  .I (qdr1_kn_buf),
-//  .O (qdr1_kn)
-//);
-//
-//wire qdr1_rdn_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr1_rdn (
-//  .I (qdr1_rdn_buf),
-//  .O (qdr1_rdn)
-//);
-//
-//wire qdr1_wrn_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr1_wrn (
-//  .I (qdr1_wrn_buf),
-//  .O (qdr1_wrn)
-//);
-//
-//wire [20:0] qdr1_a_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr1_a[20:0] (
-//  .I (qdr1_a_buf),
-//  .O (qdr1_a)
-//);
-//
-//wire [35:0] qdr1_d_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr1_d[35:0] (
-//  .I (qdr1_d_buf),
-//  .O (qdr1_d)
-//);
-//
-//wire qdr1_doffn_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr1_doffn (
-//  .I (qdr1_doffn_buf),
-//  .O (qdr1_doffn)
-//);
-//
-//wire [35:0] qdr1_q_buf;
-//IBUF #(
-//  .IOSTANDARD("HSTL_I_DCI")
-//) IBUF_qdr1_q[35:0] (
-//  .I (qdr1_q),
-//  .O (qdr1_q_buf)
-//);
-//assign qdr1_d_buf     = qdr1_q_buf;
-//assign qdr1_a_buf     = qdr1_q_buf[20:0];
-//assign qdr1_doffn_buf = qdr1_q_buf[0];
-//assign qdr1_wrn_buf   = qdr1_q_buf[0];
-//assign qdr1_rdn_buf   = qdr1_q_buf[0];
-//assign qdr1_k_buf     = qdr1_q_buf[0];
-//assign qdr1_kn_buf    = qdr1_q_buf[0];
-//
-///* qdr2 */
-//
-//wire qdr2_k_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr2_k (
-//  .I (qdr2_k_buf),
-//  .O (qdr2_k)
-//);
-//
-//wire qdr2_kn_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr2_kn (
-//  .I (qdr2_kn_buf),
-//  .O (qdr2_kn)
-//);
-//
-//wire qdr2_rdn_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr2_rdn (
-//  .I (qdr2_rdn_buf),
-//  .O (qdr2_rdn)
-//);
-//
-//wire qdr2_wrn_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr2_wrn (
-//  .I (qdr2_wrn_buf),
-//  .O (qdr2_wrn)
-//);
-//
-//wire [20:0] qdr2_a_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr2_a[20:0] (
-//  .I (qdr2_a_buf),
-//  .O (qdr2_a)
-//);
-//
-//wire [35:0] qdr2_d_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr2_d[35:0] (
-//  .I (qdr2_d_buf),
-//  .O (qdr2_d)
-//);
-//
-//wire qdr2_doffn_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr2_doffn (
-//  .I (qdr2_doffn_buf),
-//  .O (qdr2_doffn)
-//);
-//
-//wire [35:0] qdr2_q_buf;
-//IBUF #(
-//  .IOSTANDARD("HSTL_I_DCI")
-//) IBUF_qdr2_q[35:0] (
-//  .I (qdr2_q),
-//  .O (qdr2_q_buf)
-//);
-//assign qdr2_d_buf     = qdr2_q_buf;
-//assign qdr2_a_buf     = qdr2_q_buf[20:0];
-//assign qdr2_doffn_buf = qdr2_q_buf[0];
-//assign qdr2_wrn_buf   = qdr2_q_buf[0];
-//assign qdr2_rdn_buf   = qdr2_q_buf[0];
-//assign qdr2_k_buf     = qdr2_q_buf[0];
-//assign qdr2_kn_buf    = qdr2_q_buf[0];
-//
-///* qdr 3 */
-//
-//wire qdr3_k_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr3_k (
-//  .I (qdr3_k_buf),
-//  .O (qdr3_k)
-//);
-//
-//wire qdr3_kn_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr3_kn (
-//  .I (qdr3_kn_buf),
-//  .O (qdr3_kn)
-//);
-//
-//wire qdr3_rdn_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr3_rdn (
-//  .I (qdr3_rdn_buf),
-//  .O (qdr3_rdn)
-//);
-//
-//wire qdr3_wrn_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr3_wrn (
-//  .I (qdr3_wrn_buf),
-//  .O (qdr3_wrn)
-//);
-//
-//wire [20:0] qdr3_a_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr3_a[20:0] (
-//  .I (qdr3_a_buf),
-//  .O (qdr3_a)
-//);
-//
-//wire [35:0] qdr3_d_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr3_d[35:0] (
-//  .I (qdr3_d_buf),
-//  .O (qdr3_d)
-//);
-//
-//wire qdr3_doffn_buf;
-//OBUF #(
-//  .IOSTANDARD("HSTL_I")
-//) OBUF_qdr3_doffn (
-//  .I (qdr3_doffn_buf),
-//  .O (qdr3_doffn)
-//);
-//
-//wire [35:0] qdr3_q_buf;
-//IBUF #(
-//  .IOSTANDARD("HSTL_I_DCI")
-//) IBUF_qdr3_q[35:0] (
-//  .I (qdr3_q),
-//  .O (qdr3_q_buf)
-//);
-//assign qdr3_d_buf     = qdr3_q_buf;
-//assign qdr3_a_buf     = qdr3_q_buf[20:0];
-//assign qdr3_doffn_buf = qdr3_q_buf[0];
-//assign qdr3_wrn_buf   = qdr3_q_buf[0];
-//assign qdr3_rdn_buf   = qdr3_q_buf[0];
-//assign qdr3_k_buf     = qdr3_q_buf[0];
-//assign qdr3_kn_buf    = qdr3_q_buf[0];
-//
+`else
+  wire [71:0] ddr3_iobuf_I = {72{1'b0}};
+  wire [71:0] ddr3_iobuf_O;
+  wire [71:0] ddr3_iobuf_T = {72{1'b1}};
 
-///*********** MGT GPIO ************/
-//wire [11:0] mgt_gpio_bufi;
-//wire [11:0] mgt_gpio_bufo;
-//wire [11:0] mgt_gpio_bufoen;
-//
-//IOBUF #(
-//  .IOSTANDARD("LVCMOS15")
-//) IOBUF_mgt_gpio[11:0] (
-//  .IO (mgt_gpio),
-//  .I  (mgt_gpio_bufo),
-//  .O  (mgt_gpio_bufi),
-//  .T  (mgt_gpio_bufoen)
-//);
-//assign mgt_gpio_bufo   = mgt_gpio_bufi;
-//assign mgt_gpio_bufoen = mgt_gpio_bufi;
-//
-///*********** MGTs ************/
-//
-//localparam XAUI_CLK  = 0;
-//localparam MISC_CLK  = 1;
-//localparam MEZZ_CLK0 = 2;
-//localparam MEZZ_CLK1 = 3;
-//
-//localparam GTX_CLK_SRC = XAUI_CLK;
-//
-//wire xaui_clkref_0;
-//wire misc_clkref_0;
-//wire xaui_clkref_1;
-//wire misc_clkref_1;
-//wire misc_clkref_2;
-//wire xaui_clkref_2;
-//
-//wire ext_refclk7;
-//wire ext_refclk6;
-//wire ext_refclk5;
-//wire ext_refclk4;
-//wire ext_refclk3;
-//wire ext_refclk2;
-//wire ext_refclk1;
-//wire ext_refclk0;
-//
-//gtx_skeleton gtx_quad_110(
-//  .rx_n         (mgt_rx_n[3:0]),
-//  .rx_p         (mgt_rx_p[3:0]),
-//  .tx_n         (mgt_tx_n[3:0]),
-//  .tx_p         (mgt_tx_p[3:0]),
-//
-//  .mgtrefclk0_n (ext_refclk_n[3]),
-//  .mgtrefclk0_p (ext_refclk_p[3]),
-//  .mgtrefclk1_n (ext_refclk_n[7]),
-//  .mgtrefclk1_p (ext_refclk_p[7]),
-//  .refclk_o_0   (ext_refclk3),
-//  .refclk_o_1   (ext_refclk7),
-//  
-//  .refclk_i     (
-//                  GTX_CLK_SRC == MISC_CLK  ? misc_clkref_0 :
-//                  GTX_CLK_SRC == MEZZ_CLK0 ? ext_refclk3 :
-//                  GTX_CLK_SRC == MEZZ_CLK1 ? ext_refclk7 :
-//                                             xaui_clkref_0
-//                 )
-//);
-//
-//gtx_skeleton gtx_quad_111(
-//  .rx_n         (mgt_rx_n[7:4]),
-//  .rx_p         (mgt_rx_p[7:4]),
-//  .tx_n         (mgt_tx_n[7:4]),
-//  .tx_p         (mgt_tx_p[7:4]),
-//
-//  .mgtrefclk0_n (xaui_clkref_n[0]),
-//  .mgtrefclk0_p (xaui_clkref_p[0]),
-//  .mgtrefclk1_n (misc_clkref_n[0]),
-//  .mgtrefclk1_p (misc_clkref_p[0]),
-//  .refclk_o_0   (xaui_clkref_0),
-//  .refclk_o_1   (misc_clkref_0),
-//  
-//  .refclk_i     (
-//                  GTX_CLK_SRC == MISC_CLK  ? misc_clkref_0 :
-//                  GTX_CLK_SRC == MEZZ_CLK0 ? ext_refclk3 :
-//                  GTX_CLK_SRC == MEZZ_CLK1 ? ext_refclk7 :
-//                                             xaui_clkref_0
-//                 )
-//);
-//
-//gtx_skeleton gtx_quad_112(
-//  .rx_n         (mgt_rx_n[11:8]),
-//  .rx_p         (mgt_rx_p[11:8]),
-//  .tx_n         (mgt_tx_n[11:8]),
-//  .tx_p         (mgt_tx_p[11:8]),
-//
-//  .mgtrefclk0_n (ext_refclk_n[2]),
-//  .mgtrefclk0_p (ext_refclk_p[2]),
-//  .mgtrefclk1_n (ext_refclk_n[6]),
-//  .mgtrefclk1_p (ext_refclk_p[6]),
-//  .refclk_o_0   (ext_refclk2),
-//  .refclk_o_1   (ext_refclk6),
-//  
-//  .refclk_i     (
-//                  GTX_CLK_SRC == MISC_CLK  ? misc_clkref_0 :
-//                  GTX_CLK_SRC == MEZZ_CLK0 ? ext_refclk2 :
-//                  GTX_CLK_SRC == MEZZ_CLK1 ? ext_refclk6 :
-//                                             xaui_clkref_0
-//                 )
-//);
-//
-//gtx_skeleton gtx_quad_113(
-//  .rx_n         (mgt_rx_n[15:12]),
-//  .rx_p         (mgt_rx_p[15:12]),
-//  .tx_n         (mgt_tx_n[15:12]),
-//  .tx_p         (mgt_tx_p[15:12]),
-//
-//  .mgtrefclk0_n (xaui_clkref_n[1]),
-//  .mgtrefclk0_p (xaui_clkref_p[1]),
-//  .mgtrefclk1_n (misc_clkref_n[1]),
-//  .mgtrefclk1_p (misc_clkref_p[1]),
-//  .refclk_o_0   (xaui_clkref_1),
-//  .refclk_o_1   (misc_clkref_1),
-//  
-//  .refclk_i     (
-//                  GTX_CLK_SRC == MISC_CLK  ? misc_clkref_1 :
-//                  GTX_CLK_SRC == MEZZ_CLK0 ? ext_refclk2 :
-//                  GTX_CLK_SRC == MEZZ_CLK1 ? ext_refclk6 :
-//                                             xaui_clkref_1
-//                 )
-//);
-//
-//gtx_skeleton gtx_quad_114(
-//  .rx_n         (mgt_rx_n[19:16]),
-//  .rx_p         (mgt_rx_p[19:16]),
-//  .tx_n         (mgt_tx_n[19:16]),
-//  .tx_p         (mgt_tx_p[19:16]),
-//
-//  .mgtrefclk0_n (ext_refclk_n[1]),
-//  .mgtrefclk0_p (ext_refclk_p[1]),
-//  .mgtrefclk1_n (ext_refclk_n[5]),
-//  .mgtrefclk1_p (ext_refclk_p[5]),
-//  .refclk_o_0   (ext_refclk1),
-//  .refclk_o_1   (ext_refclk5),
-//  
-//  .refclk_i     (
-//                  GTX_CLK_SRC == MISC_CLK  ? misc_clkref_1 :
-//                  GTX_CLK_SRC == MEZZ_CLK0 ? ext_refclk1 :
-//                  GTX_CLK_SRC == MEZZ_CLK1 ? ext_refclk5 :
-//                                             xaui_clkref_1
-//                 )
-//);
-//
-//gtx_skeleton gtx_quad_115(
-//  .rx_n         (mgt_rx_n[23:20]),
-//  .rx_p         (mgt_rx_p[23:20]),
-//  .tx_n         (mgt_tx_n[23:20]),
-//  .tx_p         (mgt_tx_p[23:20]),
-//
-//  .mgtrefclk0_n (),
-//  .mgtrefclk0_p (),
-//  .mgtrefclk1_n (),
-//  .mgtrefclk1_p (),
-//  .refclk_o_0   (),
-//  .refclk_o_1   (),
-//  
-//  .refclk_i     (
-//                  GTX_CLK_SRC == MISC_CLK  ? misc_clkref_2 :
-//                  GTX_CLK_SRC == MEZZ_CLK0 ? ext_refclk1 :
-//                  GTX_CLK_SRC == MEZZ_CLK1 ? ext_refclk5 :
-//                                             xaui_clkref_2
-//                 )
-//);
-//
-//gtx_skeleton gtx_quad_116(
-//  .rx_n         (mgt_rx_n[27:24]),
-//  .rx_p         (mgt_rx_p[27:24]),
-//  .tx_n         (mgt_tx_n[27:24]),
-//  .tx_p         (mgt_tx_p[27:24]),
-//
-//  .mgtrefclk0_n (xaui_clkref_n[2]),
-//  .mgtrefclk0_p (xaui_clkref_p[2]),
-//  .mgtrefclk1_n (misc_clkref_n[2]),
-//  .mgtrefclk1_p (misc_clkref_p[2]),
-//  .refclk_o_0   (xaui_clkref_2),
-//  .refclk_o_1   (misc_clkref_2),
-//  
-//  .refclk_i     (
-//                  GTX_CLK_SRC == MISC_CLK  ? misc_clkref_2 :
-//                  GTX_CLK_SRC == MEZZ_CLK0 ? ext_refclk0 :
-//                  GTX_CLK_SRC == MEZZ_CLK1 ? ext_refclk4 :
-//                                             xaui_clkref_2
-//                 )
-//);
-//
-//gtx_skeleton gtx_quad_117(
-//  .rx_n         (mgt_rx_n[31:28]),
-//  .rx_p         (mgt_rx_p[31:28]),
-//  .tx_n         (mgt_tx_n[31:28]),
-//  .tx_p         (mgt_tx_p[31:28]),
-//
-//  .mgtrefclk0_n (ext_refclk_n[0]),
-//  .mgtrefclk0_p (ext_refclk_p[0]),
-//  .mgtrefclk1_n (ext_refclk_n[4]),
-//  .mgtrefclk1_p (ext_refclk_p[4]),
-//  .refclk_o_0   (ext_refclk0),
-//  .refclk_o_1   (ext_refclk4),
-//  
-//  .refclk_i     (
-//                  GTX_CLK_SRC == MISC_CLK  ? misc_clkref_2 :
-//                  GTX_CLK_SRC == MEZZ_CLK0 ? ext_refclk0 :
-//                  GTX_CLK_SRC == MEZZ_CLK1 ? ext_refclk4 :
-//                                             xaui_clkref_2
-//                 )
-//);
+  IOBUF ddr3_iobuf[71:0] (
+    .IO (ddr3_dq),
+    .I  (ddr3_iobuf_I),
+    .O  (ddr3_iobuf_O),
+    .T  (ddr3_iobuf_T)
+  );
+
+  wire [8:0] ddr3_iobufds_I = {9{1'b0}};
+  wire [8:0] ddr3_iobufds_O;
+  wire [8:0] ddr3_iobufds_T = {9{1'b1}};
+
+  /* Xilinx will kill this buffer unless I connect .I to .O
+     Doing this makes me want to kill kittens */
+  IOBUFDS ddr3_iobufds [8:0] (
+    .IO  (ddr3_dqs_p),
+    .IOB (ddr3_dqs_n),
+    .I   (ddr3_iobufds_O),
+    .O   (ddr3_iobufds_O),
+    .T   (ddr3_iobufds_T)
+  );
+
+  OBUFDS ddr3_obufds(
+    .O  (ddr3_ck_p),
+    .OB (ddr3_ck_n),
+    .I  (sys_clk)
+  );
+
+  assign ddr3_dm      =  9'b0;
+  assign ddr3_ba      =  3'b0;
+  assign ddr3_a       = 16'b0;
+  assign ddr3_sn      =  4'b0;
+  assign ddr3_rasn    =  1'b0;
+  assign ddr3_casn    =  1'b0;
+  assign ddr3_wen     =  1'b0;
+  assign ddr3_cke     =  2'b0;
+  assign ddr3_odt     =  2'b0;
+  assign ddr3_resetn  =  1'b0;
+`endif
+
+  /*********** 10Ge ***************/
+  assign mgt_gpio = 12'h111000_000111;
+
+  //156.25 MHz clock for the board
+  wire xaui_clk;
+
+  reg xaui_rstR;
+  reg xaui_rstRR;
+  always @(posedge xaui_clk) begin
+    xaui_rstR  <= sys_rst;
+    xaui_rstRR <= xaui_rstR;
+  end
+  wire xaui_rst = xaui_rstRR;
+
+  wire  [8*1-1:0] mgt_tx_rst;
+  wire  [8*1-1:0] mgt_rx_rst;
+
+  wire [8*64-1:0] mgt_txdata;
+  wire  [8*8-1:0] mgt_txcharisk;
+
+  wire [8*64-1:0] mgt_rxdata;
+  wire  [8*8-1:0] mgt_rxcharisk;
+  wire  [8*8-1:0] mgt_rxcodecomma;
+  wire  [8*4-1:0] mgt_rxencommaalign;
+  wire  [8*1-1:0] mgt_rxenchansync;
+  wire  [8*4-1:0] mgt_rxsyncok;
+  wire  [8*8-1:0] mgt_rxcodevalid;
+  wire  [8*4-1:0] mgt_rxbufferr;
+
+  wire  [8*4-1:0] mgt_rxlock;
+  wire  [8*4-1:0] mgt_rxelecidle;
+
+  wire  [8*1-1:0] mgt_loopback;
+  wire  [8*1-1:0] mgt_powerdown;
+
+  wire  [8*5-1:0] mgt_txpostemphasis;
+  wire  [8*4-1:0] mgt_txpreemphasis;
+  wire  [8*4-1:0] mgt_txdiffctrl;
+  wire  [8*3-1:0] mgt_rxeqmix;
+
+  wire [8*16-1:0] mgt_status;
+
+  /* XAUI XGMII signals */
+  wire [64*8-1:0] xgmii_txd;
+  wire  [8*8-1:0] xgmii_txc;
+  wire [64*8-1:0] xgmii_rxd;
+  wire  [8*8-1:0] xgmii_rxc;
+
+  wire  [8*8-1:0] xaui_status;
+
+  /* This is horrible */
+`ifdef ENABLE_TGE
+  parameter TGE_ENABLE_MASK = 8'b1111_1111;
+`else
+  parameter TGE_ENABLE_MASK = 8'b0000_0000;
+`endif
+
+  xaui_infrastructure #(
+    .ENABLE_MASK (TGE_ENABLE_MASK)
+  ) xaui_infrastructure_inst (
+    .mgt_reset          (sys_reset),
+
+    .xaui_refclk_n      (xaui_refclk_n),
+    .xaui_refclk_p      (xaui_refclk_p),
+
+    .mgt_rx_n           (mgt_rx_n),
+    .mgt_rx_p           (mgt_rx_p),
+    .mgt_tx_n           (mgt_tx_n),
+    .mgt_tx_p           (mgt_tx_p),
+
+    .xaui_clk           (xaui_clk),
+
+    .mgt_tx_rst         (mgt_tx_rst),
+    .mgt_rx_rst         (mgt_rx_rst),
+
+    .mgt_txdata         (mgt_txdata),
+    .mgt_txcharisk      (mgt_txcharisk),
+
+    .mgt_rxdata         (mgt_rxdata),
+    .mgt_rxcharisk      (mgt_rxcharisk),
+    .mgt_rxcodecomma    (mgt_rxcodecomma),
+    .mgt_rxencommaalign (mgt_rxencommaalign),
+    .mgt_rxenchansync   (mgt_rxenchansync),
+    .mgt_rxsyncok       (mgt_rxsyncok),
+    .mgt_rxcodevalid    (mgt_rxcodevalid),
+    .mgt_rxbufferr      (mgt_rxbufferr),
+
+    .mgt_rxlock         (mgt_rxlock),
+    .mgt_rxelecidle     (mgt_rxelecidle),
+
+    .mgt_loopback       (mgt_loopback),
+    .mgt_powerdown      (mgt_powerdown),
+
+    .mgt_txpostemphasis (mgt_txpostemphasis),
+    .mgt_txpreemphasis  (mgt_txpreemphasis),
+    .mgt_txdiffctrl     (mgt_txdiffctrl),
+    .mgt_rxeqmix        (mgt_rxeqmix),
+
+    .mgt_status         (mgt_status)
+  );
+
+`ifdef ENABLE_TGE
+  genvar I;
+generate for (I=0; I < 8; I=I+1) begin : gen_10ge
+
+  xaui_phy xaui_phy_inst (
+    .clk              (xaui_clk),
+    .reset            (xaui_rst),
+
+    .mgt_txdata       (mgt_txdata[I*64+:64]),
+    .mgt_txcharisk    (mgt_txcharisk[I*8+:8]),
+    .mgt_rxdata       (mgt_rxdata[I*64+:64]),
+    .mgt_rxcharisk    (mgt_rxcharisk[I*8+:8]),
+    .mgt_enable_align (mgt_rxencommaalign[I*4+:4]),
+    .mgt_en_chan_sync (mgt_rxenchansync[I]), 
+    .mgt_code_valid   (mgt_rxcodevalid[I*8+:8]),
+    .mgt_rxbufferr    (mgt_rxbufferr[I*4+:4]),
+    .mgt_code_comma   (mgt_rxcodecomma[I*8+:8]),
+    .mgt_rxlock       (mgt_rxlock[I*4+:4]),
+    .mgt_syncok       (mgt_rxsyncok[I*4+:4]),
+    .mgt_loopback     (mgt_loopback[I]),
+    .mgt_powerdown    (mgt_powerdown[I]),
+    .mgt_tx_reset     (mgt_tx_rst[I*4+:4]),
+    .mgt_rx_reset     (mgt_rx_rst[I*4+:4]),
+
+    .xgmii_txd        (xgmii_txd[I*64+:64]),
+    .xgmii_txc        (xgmii_txc[I*8+:8]),
+    .xgmii_rxd        (xgmii_rxd[I*64+:64]),
+    .xgmii_rxc        (xgmii_rxc[I*8+:8]),
+
+    .xaui_status      (xaui_status[I*8+:8])
+  );
+
+  //assign xgmii_txd[I*64+:64] = {8{8'h07}};
+  //assign xgmii_txc[I*8+:8]   = {8{1'b1}};
+
+  assign xgmii_txd[I*64+:64] = xgmii_rxd[I*64+:64];
+  assign xgmii_txc[I*8+:8]   = xgmii_rxc[I*8+:8];
+  
+end endgenerate
+`endif
+  
   
   /********* SGMII PHY ************/
   
@@ -1644,8 +1319,14 @@ module toplevel(
     .sgmii_resetdone    (sgmii_resetdone),
   
     .sgmii_loopback     (1'b0),
+`ifdef ENABLE_GBE
     .sgmii_powerdown    (1'b0)
+`else
+    .sgmii_powerdown    (1'b1)
+`endif
   );
+
+`ifdef ENABLE_GBE
 
   // MAC interface
   wire       mac_rx_clk;
@@ -1707,118 +1388,7 @@ module toplevel(
   assign mac_tx_data = mac_rx_data;
   assign mac_tx_dvld = mac_rx_dvld;
 
-  /*
-
-  assign debug_regin_0 = {3'b0, mac_syncacquired,  1'b0, sgmii_rxclkcorcnt, 3'b0, sgmii_reset, 3'b0, sgmii_pll_locked, 3'b0, sgmii_encommaalign, 3'b0, sgmii_resetdone, 3'b0, sgmii_txbufstatus[1], 3'b0, sgmii_rxbufstatus[2]};
-  //10010100
-
-
-  assign debug_clk = clk_125;
-
-  reg [31:0] foo0;
-  reg [31:0] foo1;
-  reg [31:0] foo2;
-  reg [31:0] foo3;
-  reg [31:0] foo4;
-  reg [31:0] foo5;
-  reg [31:0] foo6;
-
-  reg prev_dvld;
-
-  always @(posedge mac_rx_clk) begin
-    prev_dvld <= mac_rx_dvld;
-
-    if (mac_rx_goodframe)
-      foo0[15:0] <= foo0[15:0] + 1;
-    if (mac_rx_badframe)
-      foo0[31:16] <= foo0[31:16] + 1;
-
-    if (mac_rx_dvld)
-      foo1[15:0] <= foo1[15:0] + 1;
-    if (mac_rx_dvld && !prev_dvld)
-      foo1[15:0] <= 0;
-  end
-
-  always @(posedge clk_125) begin
-      
-    if (sgmii_rxiscomma) 
-      foo3[7:0] <= foo3[7:0] + 1;
-    if (sgmii_rxisk) 
-      foo3[15:8] <= foo3[15:8] + 1;
-    if (!sgmii_rxisk) 
-      foo3[23:16] <= foo3[23:16] + 1;
-    if (sgmii_rxdisperr) 
-      foo3[31:24] <= foo3[31:24] + 1;
-
-    if (sgmii_rxd != 8'b1011_1100) begin
-      if (sgmii_rxisk) 
-        foo4[15:0] <= foo4[15:0] + 1;
-    end
-
-    if (sgmii_rxisk) 
-      foo4[31:24] <= sgmii_rxd;
-
-    if (!sgmii_rxisk) 
-      foo4[23:16] <= sgmii_rxd;
-
-    if (sgmii_rxclkcorcnt == 3'b001  ||
-        sgmii_rxclkcorcnt == 3'b010  ||
-        sgmii_rxclkcorcnt == 3'b011  ||
-        sgmii_rxclkcorcnt == 3'b100) 
-      foo5[15:0] <= foo5[15:0] + 1;
-
-    if (sgmii_rxclkcorcnt == 3'b111 || sgmii_rxclkcorcnt == 3'b110) 
-      foo5[31:16] <= foo5[31:16] + 1;
-
-    if (sgmii_rxbufstatus[2]) 
-      foo6 <= foo6 + 1;
-  end
-
-  assign debug_regin_1 = foo0;
-  assign debug_regin_2 = foo1;
-  assign debug_regin_3 = foo2;
-  assign debug_regin_4 = foo3;
-  assign debug_regin_5 = foo4;
-  assign debug_regin_6 = foo5;
-  assign debug_regin_7 = foo6;
-
-
-  reg [26:0] tx_counter;
-  reg [1:0] state;
-  always @(posedge mac_tx_clk) begin
-    tx_counter <= tx_counter + 1;
-    if (sgmii_reset) begin
-      state <= 0;
-      tx_counter <= 0;
-    end else begin
-      case (state) 
-        0: begin
-          if (mac_tx_ack) begin
-            state <= 1;
-          end else begin
-            tx_counter <= 0;
-          end
-        end
-        1: begin
-          if (tx_counter == 27'd256) begin
-            state <= 2;
-          end
-        end
-        2: begin
-          if (tx_counter == {27{1'b1}}) begin
-            state <= 0;
-          end
-        end
-        default: begin
-          state <= 2;
-        end
-      endcase
-    end
-  end
-
-  assign mac_tx_dvld = state == 0 || state == 1;
-  assign mac_tx_data = tx_counter[7:0];
-  */
-
+`else
+`endif
 
 endmodule

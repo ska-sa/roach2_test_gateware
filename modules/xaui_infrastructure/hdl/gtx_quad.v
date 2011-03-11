@@ -1,4 +1,4 @@
-module gtx_qaud(
+module gtx_quad(
     input         LOOPBACK_IN,
     input         RXPOWERDOWN_IN,
     input         TXPOWERDOWN_IN,
@@ -6,8 +6,8 @@ module gtx_qaud(
     output  [7:0] RXCHARISK_OUT,
     output  [7:0] RXDISPERR_OUT,
     output  [7:0] RXNOTINTABLE_OUT,
-    input   [3;0] RXENMCOMMAALIGN_IN
-    input   [3;0] RXENPCOMMAALIGN_IN,
+    input   [3:0] RXENMCOMMAALIGN_IN,
+    input   [3:0] RXENPCOMMAALIGN_IN,
     input         RXENCHANSYNC_IN,
     output [63:0] RXDATA_OUT,
     input         RXRESET_IN,
@@ -76,6 +76,8 @@ module gtx_qaud(
   wire  [1:0] rxdisperr_float_i     [3:0];
   wire  [1:0] rxnotintable_float_i  [3:0];
 
+  wire  [1:0] rxbufstatus_float_i   [3:0];
+
   genvar I;
 
 generate for (I=0; I < 4; I=I+1) begin : gen_xaui_gtx
@@ -83,12 +85,11 @@ generate for (I=0; I < 4; I=I+1) begin : gen_xaui_gtx
     //_______________________ Simulation-Only Attributes __________________
     .SIM_RECEIVER_DETECT_PASS               ("TRUE"),
     .SIM_TX_ELEC_IDLE_LEVEL                 ("X"),
-    .SIM_GTXRESET_SPEEDUP                   (),
     .SIM_VERSION                            ("1.0"),
     .SIM_TXREFCLK_SOURCE                    (3'b000),
     .SIM_RXREFCLK_SOURCE                    (3'b000),
     //--------------------------TX PLL----------------------------
-    .TX_CLK_SOURCE                          (GTX_TX_CLK_SOURCE),
+    .TX_CLK_SOURCE                          ("TXPLL"),
     .TX_OVERSAMPLE_MODE                     ("FALSE"),
     .TXPLL_COM_CFG                          (24'h21680a),
     .TXPLL_CP_CFG                           (8'h39),
@@ -101,7 +102,7 @@ generate for (I=0; I < 4; I=I+1) begin : gen_xaui_gtx
     .TXPLL_SATA                             (2'b00),
     .TX_TDCC_CFG                            (2'b11),
     .PMA_CAS_CLK_EN                         ("FALSE"),            
-    .POWER_SAVE                             (GTX_POWER_SAVE),            
+    .POWER_SAVE                             (10'b0000110100),
     //-----------------------TX Interface-------------------------
     .GEN_TXUSRCLK                           ("TRUE"),
     .TX_DATA_WIDTH                          (20),
@@ -318,7 +319,7 @@ generate for (I=0; I < 4; I=I+1) begin : gen_xaui_gtx
     .RXENPRBSTST                    (3'b000),
     .RXPRBSERR                      (),
     //----------------- Receive Ports - RX Data Path interface -----------------
-    .RXDATA                         ({rxdata_float_i[I], RXDATAOUT[I*16+:16]}),
+    .RXDATA                         ({rxdata_float_i[I], RXDATA_OUT[I*16+:16]}),
     .RXRECCLK                       (),
     .RXRECCLKPCS                    (),
     .RXRESET                        (RXRESET_IN),
@@ -349,7 +350,7 @@ generate for (I=0; I < 4; I=I+1) begin : gen_xaui_gtx
     .RXP                            (RXP_IN[I]),
     //------ Receive Ports - RX Elastic Buffer and Phase Alignment Ports -------
     .RXBUFRESET                     (RXBUFRESET_IN),
-    .RXBUFSTATUS                    (RXBUFSTATUS_OUT[I*2+:2]),
+    .RXBUFSTATUS                    ({RXBUFSTATUS_OUT[I], rxbufstatus_float_i[I]}),
     .RXCHANISALIGNED                (),
     .RXCHANREALIGN                  (),
     .RXDLYALIGNDISABLE              (1'b1),
@@ -373,7 +374,7 @@ generate for (I=0; I < 4; I=I+1) begin : gen_xaui_gtx
     .NORTHREFCLKRX                  (2'b0),
     .PERFCLKRX                      (1'b0),
     .PLLRXRESET                     (PLLRXRESET_IN),
-    .RXPLLLKDET                     (RXPLLLKDET_OUT),
+    .RXPLLLKDET                     (RXPLLLKDET_OUT[I]),
     .RXPLLLKDETEN                   (1'b1),
     .RXPLLPOWERDOWN                 (1'b0),
     .RXPLLREFSELDY                  (3'b0),
@@ -419,7 +420,7 @@ generate for (I=0; I < 4; I=I+1) begin : gen_xaui_gtx
     .TSTIN                          (20'b11111111111111111111),
     .TSTOUT                         (),
     //---------------- Transmit Ports - TX Data Path interface -----------------
-    .TXDATA                         ({16'b0, TXDATA_IN[I*16+:16]),
+    .TXDATA                         ({16'b0, TXDATA_IN[I*16+:16]}),
     .TXOUTCLK                       (TXOUTCLK_OUT[I]),
     .TXOUTCLKPCS                    (),
     .TXRESET                        (TXRESET_IN),
@@ -447,7 +448,7 @@ generate for (I=0; I < 4; I=I+1) begin : gen_xaui_gtx
     //--------------------- Transmit Ports - TX PLL Ports ----------------------
     .GREFCLKTX                      (1'b0),
     .GTXTXRESET                     (GTXTXRESET_IN),
-    .MGTREFCLKTX                    ({1'b0, MGTREFCLKTX_IN[I]}),
+    .MGTREFCLKTX                    ({1'b0, MGTREFCLKTX_IN}),
     .NORTHREFCLKTX                  (2'b0),
     .PERFCLKTX                      (1'b0),
     .PLLTXRESET                     (PLLTXRESET_IN),

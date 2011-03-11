@@ -54,5 +54,3 @@ clean:
 	make -C synthesis clean
 	make -C par clean
 	rm -rf gen/*
-	rm -rf netlist/*
-
