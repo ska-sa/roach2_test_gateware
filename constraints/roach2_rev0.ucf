@@ -1,15 +1,21 @@
+`include <parameters.v>
 # ROACH 2 REV 0
 # FPGA constraints file
 
 Net sys_clk TNM_NET = sys_clk;
 TIMESPEC TS_sys_clk = PERIOD sys_clk 100 MHz;
 
+`ifdef ENABLE_TGE
 Net xaui_clk TNM_NET = xaui_clk;
 TIMESPEC TS_xaui_clk = PERIOD xaui_clk 156.25 MHz;
+`endif
 
+`ifdef ENABLE_GBE
 Net clk_125 TNM_NET = clk_125;
 TIMESPEC TS_clk_125 = PERIOD clk_125 125 MHz;
+`endif
 
+`ifdef ENABLE_DDR3
 # TODO: need to investigate why this is needed. Seems like a xilinx bug...
 NET "ddr3_controller_inst/u_memc_ui_top/u_mem_intfc/phy_top0/u_phy_data_io/gen_dq[*].u_iob_dq/dq_iodelay" TIG;
 
@@ -17,12 +23,15 @@ NET "ddr3_controller_inst/u_memc_ui_top/u_mem_intfc/phy_top0/u_phy_data_io/gen_d
 NET "ddr3_clk_div2"  TNM = ddr3_clk_div2;
 TIMESPEC TS_false_path_ddr3_0 = FROM sys_clk       TO  ddr3_clk_div2  TIG;
 TIMESPEC TS_false_path_ddr3_1 = FROM ddr3_clk_div2 TO  sys_clk        TIG;
+`endif
 
+`ifdef ENABLE_QDR
 # 36 Bit QDR II+ SRAM signals
 #force the timing analyser to treat sys_clk and qdr_clk as asynchronous
 NET "qdr_clk0"  TNM = qdr_clk0;
 TIMESPEC TS_false_path_qdr_0 = FROM sys_clk      TO  qdr_clk0 TIG;
 TIMESPEC TS_false_path_qdr_1 = FROM qdr_clk0     TO  sys_clk TIG;
+`endif
 
 # VRN/VRP sharing
 

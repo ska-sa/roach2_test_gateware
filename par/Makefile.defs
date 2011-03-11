@@ -13,6 +13,9 @@ HPREP6=hprep6$(ISE_VER)
 IMPACT=impact$(ISE_VER)
 TAEGINE=taengine$(ISE_VER)
 
+#preprocessed constraints file
+PCFILEGEN=$(PROJECT).ucf
+
 ######### Command Flags ###########
 NGDBUILD_FLAGS=-aul
 MAP_FLAGS=-detail -ol high -w -xe n
@@ -22,6 +25,10 @@ CPLDFIT_FLAGS=
 TRCE_FLAGS=-e 1000
 HPREP6_FLAGS=
 TAENGINE_FLAGS=
+
+#this should be passed from the main makefile
+GPP_INCLUDE=../include
+GPP_ARGS=-U "" "" "(" "," ")" "(" ")" "\`" "\\" -M "\`" "\n" " " " " "\n" "(" ")" +c "/*" "*/" +c "//" "\n"
 
 ################### Other Defines ###############################
 IS_CPLD=$(shell echo $(PARTNUM) | grep -i XC2C || echo $(PARTNUM) | grep -i XC95)

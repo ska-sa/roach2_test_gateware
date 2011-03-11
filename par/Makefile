@@ -2,8 +2,12 @@ include Makefile.defs
 
 bits: $(if $(IS_CPLD),$(PROJECT).jed,$(PROJECT).bit) 
 
-$(PROJECT).ngd: $(NETLIST) $(PCFILE)
-	$(NGDBUILD) $(addprefix -sd ,$(NETLIST_DIRS)) -uc $(PCFILE) -p $(PARTNUM) $(NGDBUILD_FLAGS) $< $@ >& ngdbuild.log
+#this should be all source > 
+$(PCFILEGEN): $(PCFILE) ../include/parameters.v
+	gpp -o $@ -I $(GPP_INCLUDE) $(GPP_ARGS) $<
+
+$(PROJECT).ngd: $(NETLIST) $(PCFILEGEN)
+	$(NGDBUILD) $(addprefix -sd ,$(NETLIST_DIRS)) -uc $(PCFILEGEN) -p $(PARTNUM) $(NGDBUILD_FLAGS) $< $@ >& ngdbuild.log
 
 #FPGA COMMANDS
 
