@@ -28,7 +28,6 @@ module TB_gbe_dup();
   wire        app_rx_badframe;
 
   wire        app_rx_overrun;
-  wire        app_rx_afull;
   wire        app_rx_ack;
   wire        app_rx_rst;
 
@@ -97,7 +96,6 @@ module TB_gbe_dup();
     .app_rx_badframe(app_rx_badframe),
 
     .app_rx_overrun(app_rx_overrun),
-    .app_rx_afull(app_rx_afull),
     .app_rx_ack(app_rx_ack),
     .app_rx_rst(app_rx_rst),
 
@@ -179,7 +177,7 @@ module TB_gbe_dup();
   end
 
   assign app_tx_data     = !app_tx_counter[0] ? app_tx_counter[16:9] : app_tx_counter[8:1];
-  assign app_tx_dvld     = 1'b0;//app_tx_en && !app_rst;
+  assign app_tx_dvld     = app_tx_en && !app_rst;
   assign app_tx_eof      = app_tx_counter[7:0] == {8{1'b1}};
   assign app_tx_destip   = {8'd192, 8'd168, 8'd64, 8'd1};
   assign app_tx_destport = 16'hbeef;
@@ -193,6 +191,7 @@ module TB_gbe_dup();
 
   assign app_tx_rst = app_rst;
  
+
 
   /**** MAC TX ****/
 
@@ -252,6 +251,16 @@ module TB_gbe_dup();
     end
   end
 
+  /**** MAC RX ****/
+  assign mac_rx_clk  = mac_clk;
+  assign mac_rx_rst  = mac_rst;
+  assign mac_rx_data = mac_tx_data;
+  assign mac_rx_dvld = mac_tx_dvld && (mac_tx_state == 1 || mac_tx_state == 2);
+
+  /* A number of cycles later */
+
+  assign mac_rx_goodframe = mac_tx_state == 3 && wait_counter == 10;
+  assign mac_rx_badframe  = 1'b0;
 
   /**** CPU Master ****/
 

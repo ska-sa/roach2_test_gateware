@@ -464,8 +464,13 @@ end endgenerate
     endcase
   end
 
+  reg [2:0] tx_state_z;
+  always @(posedge mac_clk) begin
+    tx_state_z <= tx_state;
+  end
+
   always @(*) begin
-    case (tx_state)
+    case (tx_state_z)
       TX_APP_HDR0: begin
         mac_data_reg <= mac_tx_ack ? hdr0_first : hdr0_dat;
       end

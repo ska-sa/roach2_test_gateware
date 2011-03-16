@@ -44,7 +44,6 @@ module gbe_udp #(
     output        app_rx_badframe,
 
     output        app_rx_overrun,
-    output        app_rx_afull,
     input         app_rx_ack,
     input         app_rx_rst,
 
@@ -296,10 +295,10 @@ module gbe_udp #(
     .app_srcip    (app_rx_srcip),
     .app_srcport  (app_rx_srcport),
     .app_badframe (app_rx_badframe),
-    .app_afull    (app_rx_afull),
     .app_overrun  (app_rx_overrun),
 
     .mac_clk          (mac_rx_clk),
+    .mac_rst          (mac_rx_rst),
     .mac_rx_data      (mac_rx_data),
     .mac_rx_dvld      (mac_rx_dvld),
     .mac_rx_goodframe (mac_rx_goodframe),
