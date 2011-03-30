@@ -22,7 +22,8 @@ module xaui_phy(
     xgmii_txc,
     xgmii_rxd,
     xgmii_rxc,
-    xaui_status
+    xaui_status,
+    loopback_en
   );
 
   input  clk, reset;
@@ -49,6 +50,8 @@ module xaui_phy(
   output  [7:0] xgmii_rxc;
   output  [7:0] xaui_status;
 
+  input loopback_en;
+
   wire [6:0] xaui_configuration_vector;
   
   assign xaui_configuration_vector = {
@@ -57,7 +60,7 @@ module xaui_phy(
       reset, //reset link status
       reset, //reset fault status
       1'b0,       //power down
-      1'b0        //loopback
+      loopback_en        //loopback
     };
 
   xaui_v9_2  xaui_inst(

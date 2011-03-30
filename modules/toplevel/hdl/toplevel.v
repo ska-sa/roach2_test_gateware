@@ -116,6 +116,7 @@ module toplevel(
   wire clk_125;
   // synthesis attribute KEEP of sys_clk is TRUE
   wire sys_clk;
+  wire clk_200;
 
   wire sys_rst;
   wire idelay_rdy;
@@ -126,7 +127,7 @@ module toplevel(
     .sys_clk0       (sys_clk),
     .sys_clk180     (),
     .sys_clk270     (),
-    .clk_200        (),
+    .clk_200        (clk_200),
     .sys_rst        (sys_rst),
     .idelay_rdy     (idelay_rdy)
   );
@@ -169,10 +170,7 @@ module toplevel(
     .OB(aux_synco_n),
     .I (aux_synco)
   );
-  assign aux_synco = sys_clk;
-
-  assign v6_gpio[8] = aux_synci;
-  assign v6_gpio[11] = aux_clk;
+  assign aux_synco = aux_clk | aux_synci;
 
   wire        wb_clk_i;
   wire        wb_rst_i;
@@ -408,15 +406,6 @@ module toplevel(
 
   assign debug_clk     = sys_clk;
 
-  assign debug_regin_0 = 32'h_DEAD_CAFE;
-  assign debug_regin_1 = 32'h_0B0E_FACE;
-  assign debug_regin_2 = 32'h_BAFF_BABE;
-  assign debug_regin_3 = 32'h_C0DE_B00B;
-  assign debug_regin_4 = 32'h_F00D_D00D;
-  assign debug_regin_5 = 32'h_ACED_DEED;
-  assign debug_regin_6 = 32'h_BAD_FACED;
-  assign debug_regin_7 = 32'h_B00ED_0FF;
-
   /************************ ZDOK 0 ****************************/
 
   wire [79:0] zdok0_out;
@@ -506,6 +495,7 @@ module toplevel(
   /************** Common QDR Infrastructure ****************/
 
   wire qdr_clk0;
+  // synthesis attribute KEEP of qdr_clk0 is TRUE
   wire qdr_clk180;
   wire qdr_clk270;
 
@@ -527,7 +517,7 @@ module toplevel(
   reg qdr_rstRR;
 
   always @(posedge qdr_clk0) begin
-    qdr_rstR  <= sys_rst || !qdr_pll_lock || !idelay_rdy;
+    qdr_rstR  <= sys_rst || !qdr_pll_lock;
     qdr_rstRR <= qdr_rstR;
   end
   wire qdr_rst = qdr_rstRR;
@@ -630,6 +620,9 @@ module toplevel(
 `endif
 
   /************************ QDR 1 ****************************/
+
+  assign v6_gpio[8]  = qdr_clk0;
+  assign v6_gpio[11] = qdr_rst;
 
 `ifdef ENABLE_QDR
   wire [31:0] qdr1_app_addr;
@@ -1103,9 +1096,10 @@ module toplevel(
 `endif
 
   /*********** 10Ge ***************/
-  assign mgt_gpio = 12'h111000_000111;
+  assign mgt_gpio = 12'b111000_000111;
 
   //156.25 MHz clock for the board
+  // synthesis attribute KEEP of xaui_clk is TRUE
   wire xaui_clk;
 
   reg xaui_rstR;
@@ -1152,7 +1146,48 @@ module toplevel(
 
   wire  [8*8-1:0] xaui_status;
 
-  /* This is horrible */
+
+
+  assign mgt_txpostemphasis [5*(0+1)-1:0*5] = debug_regout_0[31] ? debug_regout_0[ 4:0 ] : 5'b0000;
+  assign mgt_txpreemphasis  [4*(0+1)-1:0*4] = debug_regout_0[31] ? debug_regout_0[11:8 ] : 4'b0100;
+  assign mgt_txdiffctrl     [4*(0+1)-1:0*4] = debug_regout_0[31] ? debug_regout_0[19:16] : 4'b1010;
+  assign mgt_rxeqmix        [3*(0+1)-1:0*3] = debug_regout_0[31] ? debug_regout_0[22:20] : 3'b111;
+                                 
+  assign mgt_txpostemphasis [5*(1+1)-1:1*5] = debug_regout_0[31] ? debug_regout_0[ 4:0 ] : 5'b00000;
+  assign mgt_txpreemphasis  [4*(1+1)-1:1*4] = debug_regout_0[31] ? debug_regout_0[11:8 ] : 4'b0100;
+  assign mgt_txdiffctrl     [4*(1+1)-1:1*4] = debug_regout_0[31] ? debug_regout_0[19:16] : 4'b1010;
+  assign mgt_rxeqmix        [3*(1+1)-1:1*3] = debug_regout_0[31] ? debug_regout_0[22:20] : 3'b111;
+                                 
+  assign mgt_txpostemphasis [5*(2+1)-1:2*5] = debug_regout_0[31] ? debug_regout_0[ 4:0 ] : 5'b00000;
+  assign mgt_txpreemphasis  [4*(2+1)-1:2*4] = debug_regout_0[31] ? debug_regout_0[11:8 ] : 4'b0100;
+  assign mgt_txdiffctrl     [4*(2+1)-1:2*4] = debug_regout_0[31] ? debug_regout_0[19:16] : 4'b1010;
+  assign mgt_rxeqmix        [3*(2+1)-1:2*3] = debug_regout_0[31] ? debug_regout_0[22:20] : 3'b111;
+                                 
+  assign mgt_txpostemphasis [5*(3+1)-1:3*5] = debug_regout_0[31] ? debug_regout_0[ 4:0 ] : 5'b00000;
+  assign mgt_txpreemphasis  [4*(3+1)-1:3*4] = debug_regout_0[31] ? debug_regout_0[11:8 ] : 4'b0100;
+  assign mgt_txdiffctrl     [4*(3+1)-1:3*4] = debug_regout_0[31] ? debug_regout_0[19:16] : 4'b1010;
+  assign mgt_rxeqmix        [3*(3+1)-1:3*3] = debug_regout_0[31] ? debug_regout_0[22:20] : 3'b111;
+                                 
+  assign mgt_txpostemphasis [5*(4+1)-1:4*5] = debug_regout_0[31] ? debug_regout_0[ 4:0 ] : 5'b00000;
+  assign mgt_txpreemphasis  [4*(4+1)-1:4*4] = debug_regout_0[31] ? debug_regout_0[11:8 ] : 4'b0100;
+  assign mgt_txdiffctrl     [4*(4+1)-1:4*4] = debug_regout_0[31] ? debug_regout_0[19:16] : 4'b1010;
+  assign mgt_rxeqmix        [3*(4+1)-1:4*3] = debug_regout_0[31] ? debug_regout_0[22:20] : 3'b111;
+                                 
+  assign mgt_txpostemphasis [5*(5+1)-1:5*5] = debug_regout_0[31] ? debug_regout_0[ 4:0 ] : 5'b00000;
+  assign mgt_txpreemphasis  [4*(5+1)-1:5*4] = debug_regout_0[31] ? debug_regout_0[11:8 ] : 4'b0100;
+  assign mgt_txdiffctrl     [4*(5+1)-1:5*4] = debug_regout_0[31] ? debug_regout_0[19:16] : 4'b1010;
+  assign mgt_rxeqmix        [3*(5+1)-1:5*3] = debug_regout_0[31] ? debug_regout_0[22:20] : 3'b111;
+                                 
+  assign mgt_txpostemphasis [5*(6+1)-1:6*5] = debug_regout_0[31] ? debug_regout_0[ 4:0 ] : 5'b00000;
+  assign mgt_txpreemphasis  [4*(6+1)-1:6*4] = debug_regout_0[31] ? debug_regout_0[11:8 ] : 4'b0100;
+  assign mgt_txdiffctrl     [4*(6+1)-1:6*4] = debug_regout_0[31] ? debug_regout_0[19:16] : 4'b1010;
+  assign mgt_rxeqmix        [3*(6+1)-1:6*3] = debug_regout_0[31] ? debug_regout_0[22:20] : 3'b111;
+                                 
+  assign mgt_txpostemphasis [5*(7+1)-1:7*5] = debug_regout_0[31] ? debug_regout_0[ 4:0 ] : 5'b00000;
+  assign mgt_txpreemphasis  [4*(7+1)-1:7*4] = debug_regout_0[31] ? debug_regout_0[11:8 ] : 4'b0100;
+  assign mgt_txdiffctrl     [4*(7+1)-1:7*4] = debug_regout_0[31] ? debug_regout_0[19:16] : 4'b1010;
+  assign mgt_rxeqmix        [3*(7+1)-1:7*3] = debug_regout_0[31] ? debug_regout_0[22:20] : 3'b111;
+
 `ifdef ENABLE_TGE
   parameter TGE_ENABLE_MASK = 8'b1111_1111;
 `else
@@ -1162,7 +1197,7 @@ module toplevel(
   xaui_infrastructure #(
     .ENABLE_MASK (TGE_ENABLE_MASK)
   ) xaui_infrastructure_inst (
-    .mgt_reset          (sys_reset),
+    .mgt_reset          (sys_rst),
 
     .xaui_refclk_n      (xaui_refclk_n),
     .xaui_refclk_p      (xaui_refclk_p),
@@ -1203,6 +1238,44 @@ module toplevel(
     .mgt_status         (mgt_status)
   );
 
+  wire [7:0] xaui_loopback = 8'b0000_0000;
+
+  reg [23:0] err_cnt [7:0];
+  reg [31:0] k_cnt;
+  reg [31:0] nk_cnt;
+  reg [31:0] buf_cnt;
+  reg [31:0] A_cnt;
+  reg [31:0] K_cnt;
+  reg [31:0] R_cnt;
+
+  always @(posedge xaui_clk) begin
+    if (mgt_rxcodevalid[(0 + 1)*8-1:0*8] != 8'b1111_1111)
+      err_cnt[0] <= err_cnt[0] + 1;
+    if (mgt_rxcodevalid[(1 + 1)*8-1:1*8] != 8'b1111_1111)
+      err_cnt[1] <= err_cnt[1] + 1;
+    if (mgt_rxcodevalid[(2 + 1)*8-1:2*8] != 8'b1111_1111)
+      err_cnt[2] <= err_cnt[2] + 1;
+    if (mgt_rxcodevalid[(3 + 1)*8-1:3*8] != 8'b1111_1111)
+      err_cnt[3] <= err_cnt[3] + 1;
+    if (mgt_rxcodevalid[(4 + 1)*8-1:4*8] != 8'b1111_1111)
+      err_cnt[4] <= err_cnt[4] + 1;
+    if (mgt_rxcodevalid[(5 + 1)*8-1:5*8] != 8'b1111_1111)
+      err_cnt[5] <= err_cnt[5] + 1;
+    if (mgt_rxcodevalid[(6 + 1)*8-1:6*8] != 8'b1111_1111)
+      err_cnt[6] <= err_cnt[6] + 1;
+    if (mgt_rxcodevalid[(7 + 1)*8-1:7*8] != 8'b1111_1111)
+      err_cnt[7] <= err_cnt[7] + 1;
+  end
+
+  assign debug_regin_0 = {xaui_status[(0+1)*8-1:0*8], err_cnt[0]};
+  assign debug_regin_1 = {xaui_status[(1+1)*8-1:1*8], err_cnt[1]};
+  assign debug_regin_2 = {xaui_status[(2+1)*8-1:2*8], err_cnt[2]};
+  assign debug_regin_3 = {xaui_status[(3+1)*8-1:3*8], err_cnt[3]};
+  assign debug_regin_4 = {xaui_status[(4+1)*8-1:4*8], err_cnt[4]};
+  assign debug_regin_5 = {xaui_status[(5+1)*8-1:5*8], err_cnt[5]};
+  assign debug_regin_6 = {xaui_status[(6+1)*8-1:6*8], err_cnt[6]};
+  assign debug_regin_7 = {xaui_status[(7+1)*8-1:7*8], err_cnt[7]};
+
 `ifdef ENABLE_TGE
   genvar I;
 generate for (I=0; I < 8; I=I+1) begin : gen_10ge
@@ -1224,23 +1297,24 @@ generate for (I=0; I < 8; I=I+1) begin : gen_10ge
     .mgt_syncok       (mgt_rxsyncok[I*4+:4]),
     .mgt_loopback     (mgt_loopback[I]),
     .mgt_powerdown    (mgt_powerdown[I]),
-    .mgt_tx_reset     (mgt_tx_rst[I*4+:4]),
-    .mgt_rx_reset     (mgt_rx_rst[I*4+:4]),
+    .mgt_tx_reset     (mgt_tx_rst[I*4]),
+    .mgt_rx_reset     (mgt_rx_rst[I*4]),
 
     .xgmii_txd        (xgmii_txd[I*64+:64]),
     .xgmii_txc        (xgmii_txc[I*8+:8]),
     .xgmii_rxd        (xgmii_rxd[I*64+:64]),
     .xgmii_rxc        (xgmii_rxc[I*8+:8]),
 
-    .xaui_status      (xaui_status[I*8+:8])
+    .xaui_status      (xaui_status[I*8+:8]),
+    .loopback_en      (xaui_loopback[I])
   );
 
-  //assign xgmii_txd[I*64+:64] = {8{8'h07}};
-  //assign xgmii_txc[I*8+:8]   = {8{1'b1}};
+  assign xgmii_txd[I*64+:64] = {8{8'h07}};
+  assign xgmii_txc[I*8+:8]   = {8{1'b1}};
 
-  assign xgmii_txd[I*64+:64] = xgmii_rxd[I*64+:64];
-  assign xgmii_txc[I*8+:8]   = xgmii_rxc[I*8+:8];
-  
+  //assign xgmii_txd[I*64+:64] = xgmii_rxd[I*64+:64];
+  //assign xgmii_txc[I*8+:8]   = xgmii_rxc[I*8+:8];
+
 end endgenerate
 `endif
   

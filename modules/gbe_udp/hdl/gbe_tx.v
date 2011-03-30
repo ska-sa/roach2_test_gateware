@@ -5,7 +5,7 @@ module gbe_tx #(
   ) (
     // Application Interface
     input         app_clk,
-    input         app_rst,
+    input         app_rst, /* These reset MUST be applied for multiple cycles */
     input   [7:0] app_data,
     input         app_dvld,
     input         app_eof,
@@ -286,6 +286,8 @@ end endgenerate
       if (!cpu_pending) begin 
         cpu_ack <= 1'b0;
       end
+
+      /* TODO: optimise - cpu frames will block if the app is using the interface, even though there is a free buffer */
 
       case (tx_state)
         TX_IDLE: begin

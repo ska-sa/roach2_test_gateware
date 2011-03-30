@@ -886,13 +886,13 @@ NET "sgmii_tx_p"         LOC = E1;
 
 ### MGT external clocks
 
-# XAUI reference clk (156.25 MHz)
-NET "xaui_refclk_n<0>"   LOC = AU9;
-NET "xaui_refclk_n<1>"   LOC = AF7;
-NET "xaui_refclk_n<2>"   LOC = M7;
-NET "xaui_refclk_p<0>"   LOC = AU10;
-NET "xaui_refclk_p<1>"   LOC = AF8;
-NET "xaui_refclk_p<2>"   LOC = M8;
+# Refclk (156.25 MHz)
+NET "xaui_refclk_n<0>"   LOC = AT7;
+NET "xaui_refclk_n<1>"   LOC = AD7;
+NET "xaui_refclk_n<2>"   LOC = K7;
+NET "xaui_refclk_p<0>"   LOC = AT8;
+NET "xaui_refclk_p<1>"   LOC = AD8;
+NET "xaui_refclk_p<2>"   LOC = K8;
 
 ## MGT Mezzanine Card Signals
 

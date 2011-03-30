@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-`define SIM_LENGTH 100000
+`define SIM_LENGTH 400000
 
 `define APPCLK_PERIOD 4
 `define MACCLK_PERIOD 8
@@ -17,10 +17,10 @@ module TB_gbe_dup();
   localparam APP_DEST_IP      = LOCAL_IP;
   localparam APP_DEST_PORT    = LOCAL_PORT;
 
-  localparam APP_TX_FRAMESIZE = 4096;
+  localparam APP_TX_FRAMESIZE = 1024;
 
-  localparam CPU_TX_FRAMESIZE = 512;
-  localparam CPU_FRAME        = 10;
+  localparam CPU_TX_FRAMESIZE = 128;
+  localparam CPU_FRAMES       = 3;
 
 /**** Application Interface ****/
   wire        app_clk_i;
@@ -173,6 +173,42 @@ module TB_gbe_dup();
   localparam MODE_RX_OVERRUN  = 2;
   localparam MODE_RX_OVERWAIT = 3;
   localparam MODE_CPU         = 4;
+  localparam MODE_DONE        = 5;
+
+  always @(posedge app_clk) begin
+    if (app_rst) begin
+      mode <= MODE_TX_OVERFLOW;
+    end else begin
+      case (mode)
+        MODE_TX_OVERFLOW: begin
+          if (mode_done[MODE_TX_OVERFLOW]) begin
+            mode <= MODE_TX_OVERWAIT;
+          end
+        end
+        MODE_TX_OVERWAIT: begin
+          if (mode_done[MODE_TX_OVERWAIT]) begin
+            mode <= MODE_RX_OVERRUN;
+          end
+        end
+        MODE_RX_OVERRUN: begin
+          if (mode_done[MODE_RX_OVERRUN]) begin
+            mode <= MODE_RX_OVERWAIT;
+          end
+        end
+        MODE_RX_OVERWAIT: begin
+          if (mode_done[MODE_RX_OVERWAIT]) begin
+            mode <= MODE_CPU;
+          end
+        end
+        MODE_CPU: begin
+          if (mode_done[MODE_CPU]) begin
+            $display("PASSED");
+            $finish;
+          end
+        end
+      endcase
+    end
+  end
 
 
   /************************* APP TX *****************************/
@@ -193,14 +229,18 @@ module TB_gbe_dup();
 
   reg tx_overflow_rst;
 
+  reg app_tx_rst_reg;
+
   always @(posedge app_clk) begin
     tx_overflow_rst <= 1'b0;
 
     if (app_rst) begin
+      mode_done[MODE_TX_OVERWAIT] <= 1'b0;
       mode_done[MODE_TX_OVERFLOW] <= 1'b0;
       app_tx_counter <= 34'h0;
       app_tx_en <= 1'b0;
       wait_overflow_clear <= 1'b0;
+      app_tx_rst_reg <= 1'b0;
     end else begin
       case (mode)
         MODE_TX_OVERFLOW: begin
@@ -211,11 +251,16 @@ module TB_gbe_dup();
           end else begin
             app_tx_en <= 1'b1;
             if (app_tx_overflow) begin
+              app_tx_rst_reg      <= 1'b1;
               tx_overflow_rst     <= 1'b1;
               wait_overflow_clear <= 1'b1;
               app_tx_en <= 1'b0;
             end
           end
+        end
+        MODE_TX_OVERWAIT: begin
+          app_tx_rst_reg      <= 1'b0;
+          mode_done[MODE_TX_OVERWAIT] <= 1'b1;
         end
         default : begin
           if (app_tx_afull)
@@ -233,23 +278,25 @@ module TB_gbe_dup();
         end
       endcase
     end
+    app_tx_rst_reg <= app_tx_overflow && app_tx_en;
   end
 
-  assign app_tx_data     = app_tx_counter[1:0] == 0 : (app_tx_counter >>  2) & 8'hff:
-                           app_tx_counter[1:0] == 1 : (app_tx_counter >> 10) & 8'hff:
-                           app_tx_counter[1:0] == 2 : (app_tx_counter >> 18) & 8'hff:
-                           app_tx_counter[1:0] == 3 : (app_tx_counter >> 26) & 8'hff:
+  assign app_tx_data     = app_tx_counter[1:0] == 3 ? (app_tx_counter >>  2) & 8'hff:
+                           app_tx_counter[1:0] == 2 ? (app_tx_counter >> 10) & 8'hff:
+                           app_tx_counter[1:0] == 1 ? (app_tx_counter >> 18) & 8'hff:
+                                                      (app_tx_counter >> 26) & 8'hff;
 
   assign app_tx_dvld     = app_tx_en && !app_rst;
   assign app_tx_eof      = mode == MODE_TX_OVERFLOW ? 1'b0:
-                           (app_tx_counter % APP_TX_FRAME_SIZE) == APP_TX_FRAME_SIZE - 1;
+                           (app_tx_counter % APP_TX_FRAMESIZE) == APP_TX_FRAMESIZE - 1;
   assign app_tx_destip   = APP_DEST_IP;
   assign app_tx_destport = APP_DEST_PORT;
-  assign app_tx_rst      = app_rst || app_tx_overflow &&app_tx_en;
+  assign app_tx_rst      = app_rst || app_tx_rst_reg;
 
   /************************* APP RX **************************/
 
   reg app_rx_ack_reg;
+  reg app_rx_rst_reg;
 
   reg        rx_counter_valid;
   reg [31:0] rx_counter;
@@ -259,10 +306,17 @@ module TB_gbe_dup();
 
   reg        rx_data_check;
 
+  reg [15:0] rx_frame_length;
+
+  reg rx_wait_eof;
+
   always @(posedge app_clk) begin
     rx_data_check <= 1'b0;
+    app_rx_rst_reg <= 1'b0;
 
     if (app_rst) begin
+      rx_frame_length  <= 0;
+      rx_wait_eof      <= 1'b1;
       app_rx_ack_reg   <= 1'b0;
       rx_counter_valid <= 1'b0;
       rx_data_index    <= 2'b0;
@@ -274,7 +328,7 @@ module TB_gbe_dup();
         rx_counter       <= rx_data;
 
         if (rx_data != (rx_counter + 1) && rx_counter_valid) begin
-          $display("FAILED: app rx data mismatch - got %x, expected %x", rx_data, rx_counter + 1);
+          $display("FAILED: app rx data mismatch - got %x, expected %x", rx_data, rx_counter + 32'h1);
           $finish;
         end
       end
@@ -288,38 +342,55 @@ module TB_gbe_dup();
         end
         MODE_RX_OVERRUN  : begin
           app_rx_ack_reg <= 1'b0;
-          if (app_rx_overrun)
+          if (app_rx_overrun) begin
             mode_done[MODE_RX_OVERRUN] <= 1'b1;
+          end
         end
         MODE_RX_OVERWAIT : begin
           app_rx_ack_reg <= 1'b1;
+          if (!app_rx_ack_reg)
+            app_rx_rst_reg <= 1'b1;
           if (!app_rx_overrun && app_rx_eof && app_rx_dvld)
             mode_done[MODE_RX_OVERWAIT] <= 1'b1;
         end
         default: begin
           app_rx_ack_reg <= 1'b1;
-          if (app_rx_dvld && app_rx_ack) begin
-            rx_data_index <= rx_data_index + 1;
-            case (rx_data_index)
-              0: begin
-                rx_data[7:0]  <= app_rx_data;
+          if (!rx_wait_eof) begin
+            if (app_rx_dvld && app_rx_ack) begin
+              rx_frame_length <= rx_frame_length + 16'h1;
+              rx_data_index <= rx_data_index + 1;
+              case (rx_data_index)
+                3: begin
+                  rx_data_check <= 1'b1;
+                  rx_data[7:0]  <= app_rx_data;
+                end
+                2: begin
+                  rx_data[15:8]  <= app_rx_data;
+                end
+                1: begin
+                  rx_data[23:16] <= app_rx_data;
+                end
+                0: begin
+                  rx_data[31:24] <= app_rx_data;
+                end
+              endcase
+            end
+            if (app_rx_dvld && app_rx_eof) begin
+              if (rx_frame_length != APP_TX_FRAMESIZE - 1) begin
+                $display("ERROR: wrong app rx framelength- got %x, expected %x", rx_frame_length + 1, APP_TX_FRAMESIZE);
+                $finish;
               end
-              1: begin
-                rx_data[15:8]  <= app_rx_data;
-              end
-              2: begin
-                rx_data[23:16] <= app_rx_data;
-              end
-              3: begin
-                rx_data[31:24] <= app_rx_data;
-                rx_data_check <= 1'b1;
-              end
-            endcase
+              rx_frame_length <= 16'h0;
+            end
+          end else if (app_rx_dvld && app_rx_eof) begin
+            rx_wait_eof <= 1'b0;
           end
         end
       endcase
     end
   end
+  assign app_rx_rst = app_rst | app_rx_rst_reg;
+  assign app_rx_ack = app_rx_ack_reg;
 
 
   /******************* MAC *******************/
@@ -380,6 +451,33 @@ module TB_gbe_dup();
   assign mac_rx_goodframe = mac_tx_state == 3 && wait_counter == 10;
   assign mac_rx_badframe  = 1'b0;
 
+  reg [15:0] foo;
+  localparam MAC_HDR_SIZE = 16'd14;
+  localparam IP_HDR_SIZE  = 16'd20;
+  localparam UDP_HDR_SIZE = 16'd8;
+
+
+  always @(posedge mac_clk) begin
+    if (mac_rst) begin
+      foo <= 15'b0;
+    end else begin
+      if (!mac_rx_dvld) begin
+        foo <= 0;
+      end else begin
+        foo <= foo + 1;
+        if (foo < MAC_HDR_SIZE) begin
+          $display ("mac[%d] = %x", foo, mac_rx_data);
+        end else if (foo < MAC_HDR_SIZE + IP_HDR_SIZE) begin
+          $display ("ip[%d]  = %x", foo-MAC_HDR_SIZE, mac_rx_data);
+        end else if (foo < MAC_HDR_SIZE + IP_HDR_SIZE + UDP_HDR_SIZE) begin
+          $display ("udp[%d] = %x", foo-MAC_HDR_SIZE-IP_HDR_SIZE, mac_rx_data);
+        end else begin
+          $display ("dat[%d] = %x", foo-MAC_HDR_SIZE-IP_HDR_SIZE-UDP_HDR_SIZE, mac_rx_data);
+        end
+      end
+    end
+  end
+
   /************************ CPU Master ******************************/
 
   reg cpu_rst;
@@ -404,14 +502,21 @@ module TB_gbe_dup();
   localparam CPU_WRSEND = 3;
   localparam CPU_RDWAIT = 4;
   localparam CPU_RD     = 5;
-  localparam CPU_RDSEND = 6;
+  localparam CPU_RDACK  = 6;
   localparam CPU_DONE   = 7;
 
   reg [31:0] cpu_progress;
 
+  localparam REG_SIZES  = 32'd24;
+  localparam REG_TXDATA = 32'h1000;
+  localparam REG_RXDATA = 32'h2000;
+
+  /* need to force the signal to be 16 bits */
+  wire [15:0] cpu_size = CPU_TX_FRAMESIZE;
 
   always @(posedge cpu_clk) begin
-    cpu_sel <= 1'b0;
+    cpu_stb <= 1'b0;
+    cpu_sel <= 4'b1111;
 
     if (cpu_rst) begin
       cpu_state           <= CPU_IDLE;
@@ -423,23 +528,123 @@ module TB_gbe_dup();
       case (cpu_state)
         CPU_IDLE : begin
           if (mode == MODE_CPU) begin
-            cpu_state <= CPU_WR;
+            cpu_state <= CPU_WRWAIT;
           end
         end
         CPU_WRWAIT : begin
+          if (cpu_wait_ack) begin
+            if (cpu_ack) begin
+              cpu_wait_ack <= 1'b0;
+
+              if (cpu_dat_rd[31:16] == 16'h0) 
+                cpu_state <= CPU_WR;
+            end
+          end else begin
+            cpu_adr      <= REG_SIZES;
+            cpu_rnw      <= 1'b1;
+            cpu_stb      <= 1'b1;
+            cpu_wait_ack <= 1'b1;
+          end
         end
         CPU_WR : begin
+          if (cpu_wait_ack) begin
+            if (cpu_ack) begin
+              cpu_wait_ack     <= 1'b0;
+              cpu_buffer_index <= cpu_buffer_index + 1;
+              if (cpu_buffer_index  == (CPU_TX_FRAMESIZE/4) - 1) begin
+                cpu_state <= CPU_WRSEND;
+                cpu_buffer_index <= 0;
+              end
+            end
+          end else begin
+            cpu_adr      <= REG_TXDATA + {cpu_buffer_index, 2'b0};
+            cpu_dat_wr   <= cpu_buffer_index;
+            cpu_rnw      <= 1'b0;
+            cpu_stb      <= 1'b1;
+            cpu_wait_ack <= 1'b1;
+          end
         end
         CPU_WRSEND : begin
+          if (cpu_wait_ack) begin
+            if (cpu_ack) begin
+              cpu_wait_ack <= 1'b0;
+              cpu_state    <= CPU_RDWAIT;
+            end
+          end else begin
+            cpu_adr      <= REG_SIZES;
+
+            // must take car not to ack RX with size 0 
+            cpu_dat_wr   <= {cpu_size, 16'hffff};
+            cpu_rnw      <= 1'b0;
+            cpu_stb      <= 1'b1;
+            cpu_wait_ack <= 1'b1;
+          end
         end
         CPU_RDWAIT : begin
+          if (cpu_wait_ack) begin
+            if (cpu_ack) begin
+              cpu_wait_ack <= 1'b0;
+              if (cpu_dat_rd[15:0] == cpu_size) begin
+                cpu_state <= CPU_RD;
+              end else if (cpu_dat_rd[15:0] != 16'h0) begin
+                $display("FAILED: got incorrect rxsize - expected %x, got %x",
+                                                            cpu_size, cpu_dat_rd[15:0]);
+                $finish;
+              end
+            end
+          end else begin
+            cpu_adr      <= REG_SIZES;
+            cpu_rnw      <= 1'b1;
+            cpu_stb      <= 1'b1;
+            cpu_wait_ack <= 1'b1;
+          end
         end
         CPU_RD : begin
+          if (cpu_wait_ack) begin
+            if (cpu_ack) begin
+              cpu_wait_ack <= 1'b0;
+              cpu_buffer_index <= cpu_buffer_index + 1;
+
+              if (cpu_dat_rd != cpu_buffer_index) begin
+                $display("FAILED: cpu data mismatch - expected %x, got %x",
+                                                            cpu_buffer_index, cpu_dat_rd);
+                $finish;
+              end else begin
+                if (cpu_buffer_index == (CPU_TX_FRAMESIZE/4) - 1) begin
+                  cpu_state <= CPU_RDACK;
+                end
+              end
+            end
+          end else begin
+            cpu_adr      <= REG_RXDATA + {cpu_buffer_index, 2'b0};
+            cpu_rnw      <= 1'b1;
+            cpu_stb      <= 1'b1;
+            cpu_wait_ack <= 1'b1;
+          end
         end
         CPU_RDACK : begin
+          if (cpu_wait_ack) begin
+            if (cpu_ack) begin
+              cpu_wait_ack <= 1'b0;
+              cpu_buffer_index <= 0;
+              if (cpu_progress == CPU_FRAMES - 1) begin
+                cpu_state <= CPU_DONE;
+              end else begin
+                cpu_state <= CPU_WRWAIT;
+                cpu_progress <= cpu_progress + 1;
+              end
+            end
+          end else begin
+            cpu_adr      <= REG_SIZES;
+
+            cpu_dat_wr   <= {16'b0, 16'b0};
+            cpu_rnw      <= 1'b0;
+            cpu_stb      <= 1'b1;
+            cpu_wait_ack <= 1'b1;
+          end
         end
         CPU_DONE : begin
-          mode_done[MODE_CPU] <= 1'b0;
+          mode_done[MODE_CPU] <= 1'b1;
         end
       endcase
     end

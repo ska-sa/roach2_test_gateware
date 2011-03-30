@@ -26,7 +26,7 @@ module gbe_rx #(
     input  [47:0] local_mac,
     input  [31:0] local_ip,
     input  [15:0] local_port,
-    input         local_promiscuous,
+    input         cpu_promiscuous,
 
     output [10:0] cpu_addr,
     output  [7:0] cpu_wr_data,
@@ -280,55 +280,53 @@ module gbe_rx #(
       0: begin
         if (local_mac[47:40] != mac_data && mac_data != 8'hff) begin
           hdr0_app_ok <= 1'b0;
-          if (!local_promiscuous)
+          if (!cpu_promiscuous)
             hdr0_cpu_ok <= 1'b0;
         end
       end
       1: begin
         if (local_mac[39:32] != mac_data && mac_data != 8'hff) begin
           hdr0_app_ok <= 1'b0;
-          if (!local_promiscuous)
+          if (!cpu_promiscuous)
             hdr0_cpu_ok <= 1'b0;
         end
       end
       2: begin
         if (local_mac[31:24] != mac_data && mac_data != 8'hff) begin
           hdr0_app_ok <= 1'b0;
-          if (!local_promiscuous)
+          if (!cpu_promiscuous)
             hdr0_cpu_ok <= 1'b0;
         end
       end
       3: begin
         if (local_mac[23:16] != mac_data && mac_data != 8'hff) begin
           hdr0_app_ok <= 1'b0;
-          if (!local_promiscuous)
+          if (!cpu_promiscuous)
             hdr0_cpu_ok <= 1'b0;
         end
       end
       4: begin
         if (local_mac[15:8] != mac_data && mac_data != 8'hff) begin
           hdr0_app_ok <= 1'b0;
-          if (!local_promiscuous)
+          if (!cpu_promiscuous)
             hdr0_cpu_ok <= 1'b0;
         end
       end
       5: begin
         if (local_mac[7:0] != mac_data && mac_data != 8'hff) begin
           hdr0_app_ok <= 1'b0;
-          if (!local_promiscuous)
+          if (!cpu_promiscuous)
             hdr0_cpu_ok <= 1'b0;
         end
       end
       12: begin /* Ethertype[15:8] - must be ipv4*/
         if (mac_data != 8'h08) begin
           hdr0_app_ok <= 1'b0;
-          hdr0_cpu_ok <= 1'b0;
         end
       end
       13: begin /* Ethertype[7:0] - must be ipv4*/
         if (mac_data != 8'h00) begin
           hdr0_app_ok <= 1'b0;
-          hdr0_cpu_ok <= 1'b0;
         end
       end
     endcase
@@ -393,7 +391,7 @@ module gbe_rx #(
 
     case (hdr_progress)
       2: begin
-        if (mac_data != local_port[15:0]) begin
+        if (mac_data != local_port[15:8]) begin
           hdr2_app_ok <= 1'b0;
         end
       end
@@ -417,7 +415,7 @@ module gbe_rx #(
 
   always @(posedge app_clk) begin
     app_overrunR  <= rx_overrun;
-    app_overrunR  <= app_overrunRR;
+    app_overrunRR <= app_overrunR;
   end
 
   reg  app_rst_got;
@@ -493,7 +491,7 @@ module gbe_rx #(
     if (rx_state == RX_DATA && rx_stateR != RX_DATA)
       packet_first <= 1'b1;
 
-    if (rx_stateR == RX_DATA)
+    if (rx_state == RX_DATA)
       packet_dvld <= 1'b1;
   end
 
@@ -541,16 +539,18 @@ module gbe_rx #(
           cpu_counter    <= 11'b0;
           cpu_ready_reg  <= 1'b0;
 
-          if (packet_dvld)
+          if (mac_dvld)
             cpu_state <= CPU_DATA;
         end
         CPU_DATA: begin
-          if (!packet_dvld) begin
-            cpu_state <= CPU_IDLE;
+          if (!mac_dvld) begin
+            cpu_state <= CPU_VALIDATE;
           end else begin
             if (cpu_counter == {11{1'b1}}) begin
               cpu_invalidate <= 1'b1;
             end 
+            if (!cpu_ok)
+              cpu_invalidate <= 1'b1;
             cpu_counter <= cpu_counter + 11'd1;
           end
         end
@@ -560,12 +560,12 @@ module gbe_rx #(
             cpu_ready_reg <= 1'b1;
           end
 
-          if (mac_rx_badframe || !cpu_ok || cpu_invalidate) begin
+          if (mac_rx_badframe || cpu_invalidate) begin
             cpu_state <= CPU_IDLE;
           end
         end
         CPU_HANDSHAKE: begin
-          if (cpu_ack) begin
+          if (cpu_ack && cpu_ready_reg) begin
             cpu_ready_reg      <= 1'b0;
             cpu_buffer_sel_reg <= !cpu_buffer_sel_reg;
           end
@@ -578,7 +578,7 @@ module gbe_rx #(
   end
 
   assign cpu_wr_en   = cpu_state == CPU_DATA;
-  assign cpu_addr    = cpu_counter_z;
+  assign cpu_addr    = cpu_counter;
   assign cpu_wr_data = mac_data_aligned;
 
   assign cpu_size    = cpu_counter;

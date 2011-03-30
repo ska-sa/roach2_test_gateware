@@ -10,6 +10,8 @@ module gbe_udp #(
     parameter LOCAL_PORT = 0,
   /* Default local gateway */
     parameter LOCAL_GATEWAY = 0,
+  /* Default promiscuous mode (no MAC matching for CPU interface in promiscuous mode) */
+    parameter CPU_PROMISCUOUS = 0,
   /* Default PHY Config */
     parameter PHY_CONFIG = 0,
   /* Disable CPU_TX */
@@ -113,13 +115,16 @@ module gbe_udp #(
   wire        cpu_rx_packet_ready;
   wire        cpu_rx_packet_ack;
 
+  wire        cpu_promiscuous;
+
   gbe_cpu_attach #(
-    .LOCAL_ENABLE   (LOCAL_ENABLE),
-    .LOCAL_MAC      (LOCAL_MAC),
-    .LOCAL_IP       (LOCAL_IP),
-    .LOCAL_PORT     (LOCAL_PORT),
-    .LOCAL_GATEWAY  (LOCAL_GATEWAY),
-    .PHY_CONFIG     (PHY_CONFIG)
+    .LOCAL_ENABLE    (LOCAL_ENABLE),
+    .LOCAL_MAC       (LOCAL_MAC),
+    .LOCAL_IP        (LOCAL_IP),
+    .LOCAL_PORT      (LOCAL_PORT),
+    .LOCAL_GATEWAY   (LOCAL_GATEWAY),
+    .CPU_PROMISCUOUS (CPU_PROMISCUOUS),
+    .PHY_CONFIG      (PHY_CONFIG)
   ) gbe_cpu_attach_inst (
     .wb_clk_i (wb_clk_i),
     .wb_rst_i (wb_rst_i),
@@ -138,6 +143,8 @@ module gbe_udp #(
     .local_ip      (local_ip),
     .local_port    (local_port),
     .local_gateway (local_gateway),
+
+    .cpu_promiscuous (cpu_promiscuous),
 
   /* ARP cache CPU signals */
     .arp_cache_addr    (arp_cpu_cache_index),
@@ -193,6 +200,7 @@ module gbe_udp #(
     cpu_rx_packet_readyR  <= cpu_rx_packet_ready_unstable;
     cpu_rx_packet_readyRR <= cpu_rx_packet_readyR;
   end
+  assign cpu_rx_packet_ready = cpu_rx_packet_readyRR;
 
   always @(posedge mac_rx_clk) begin
     cpu_rx_packet_ackR  <= cpu_rx_packet_ack;
@@ -308,6 +316,8 @@ module gbe_udp #(
     .local_mac     (local_mac),
     .local_ip      (local_ip),
     .local_port    (local_port),
+
+    .cpu_promiscuous (cpu_promiscuous),
 
     .cpu_addr       (cpurx_rx_addr),
     .cpu_wr_data    (cpurx_rx_wr_data),

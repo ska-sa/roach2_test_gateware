@@ -1,11 +1,12 @@
 `timescale 1ns/1ps
 module gbe_cpu_attach #(
-    parameter LOCAL_MAC     = 48'hffff_ffff_ffff,
-    parameter LOCAL_IP      = 32'hffff_ffff,
-    parameter LOCAL_PORT    = 16'hffff,
-    parameter LOCAL_GATEWAY = 8'd0,
-    parameter LOCAL_ENABLE  = 0,
-    parameter PHY_CONFIG    = 32'd0
+    parameter LOCAL_MAC       = 48'hffff_ffff_ffff,
+    parameter LOCAL_IP        = 32'hffff_ffff,
+    parameter LOCAL_PORT      = 16'hffff,
+    parameter LOCAL_GATEWAY   = 8'd0,
+    parameter LOCAL_ENABLE    = 0,
+    parameter CPU_PROMISCUOUS = 0,
+    parameter PHY_CONFIG      = 32'd0
   )(
     //WB attachment
     input         wb_clk_i,
@@ -25,6 +26,7 @@ module gbe_cpu_attach #(
     output [31:0] local_ip,
     output [15:0] local_port,
     output  [7:0] local_gateway,
+    output        cpu_promiscuous,
     //ARP Cache
     output  [7:0] arp_cache_addr,
     input  [47:0] arp_cache_rd_data,
@@ -96,6 +98,7 @@ module gbe_cpu_attach #(
   reg  [7:0] local_gateway_reg;
   reg [15:0] local_port_reg;
   reg        local_enable_reg;
+  reg        cpu_promiscuous_reg;
   reg [31:0] phy_control_reg;
 
   assign local_mac         = local_mac_reg;
@@ -103,6 +106,7 @@ module gbe_cpu_attach #(
   assign local_gateway     = local_gateway_reg;
   assign local_port        = local_port_reg;
   assign local_enable      = local_enable_reg;
+  assign cpu_promiscuous   = cpu_promiscuous_reg;
   assign phy_control       = phy_control_reg;
 
   reg use_arp_data, use_tx_data, use_rx_data;
@@ -111,6 +115,7 @@ module gbe_cpu_attach #(
 
   /* RX/TX Buffer Control regs */
 
+  reg [12:0] cpu_rx_size_reg;
   reg [11:0] cpu_tx_size_reg;
   reg        cpu_tx_ready_reg;
   reg        cpu_rx_ack_reg;
@@ -135,11 +140,17 @@ module gbe_cpu_attach #(
     end
 
     /* The size will be set to zero when the double buffer is swapped */
-    if (!cpu_rx_ready) begin
+    if (cpu_rx_size_reg == 13'h0) begin
+      cpu_rx_ack_reg  <= 1'b1;
+    end
+
+    if (cpu_rx_ready && cpu_rx_ack_reg) begin
+      cpu_rx_size_reg <= cpu_rx_size + 1;
       cpu_rx_ack_reg  <= 1'b0;
     end
 
     if (wb_rst_i) begin
+      cpu_rx_size_reg   <= 13'b0;
       cpu_tx_ready_reg  <= 1'b0;
 
       cpu_data_src      <= 4'b0;
@@ -157,6 +168,8 @@ module gbe_cpu_attach #(
       phy_control_reg   <= PHY_CONFIG;
 
       cpu_wait          <= 1'b0;
+
+      cpu_promiscuous_reg <= CPU_PROMISCUOUS;
 
     end else if (cpu_wait) begin
       cpu_wait <= 1'b0;
@@ -230,8 +243,8 @@ module gbe_cpu_attach #(
                 local_ip_reg[31:24] <= cpu_din[31:24];
             end
             REG_BUFFER_SIZES: begin
-              if (cpu_sel[0] && cpu_din[7:0] == 8'b0) begin
-                cpu_rx_ack_reg <= 1'b1;
+              if (cpu_sel[0] && cpu_din[12:0] == 8'b0) begin
+                cpu_rx_size_reg <= 13'h0;
               end
               if (cpu_sel[2]) begin
                 cpu_tx_size_reg[7:0]  <= cpu_din[23:16];
@@ -248,6 +261,8 @@ module gbe_cpu_attach #(
                 local_port_reg[15:8] <= cpu_din[15:8];
               if (cpu_sel[2])
                 local_enable_reg     <= cpu_din[16];
+              if (cpu_sel[3])
+                cpu_promiscuous_reg  <= cpu_din[24];
             end
             REG_PHY_STATUS: begin
             end
@@ -325,8 +340,8 @@ module gbe_cpu_attach #(
                              cpu_data_src == REG_LOCAL_MAC_0   ? local_mac[31:0] :
                              cpu_data_src == REG_LOCAL_GATEWAY ? {24'b0, local_gateway} :
                              cpu_data_src == REG_LOCAL_IPADDR  ? local_ip[31:0] :
-                             cpu_data_src == REG_BUFFER_SIZES  ? {4'b0, cpu_tx_size, {4'b0, cpu_rx_ack ? 12'b0 : cpu_rx_size}} :
-                             cpu_data_src == REG_VALID_PORTS   ? {8'b0, 7'b0, local_enable, local_port} :
+                             cpu_data_src == REG_BUFFER_SIZES  ? {4'b0, cpu_tx_size, {3'b0, cpu_rx_ack ? 13'b0 : cpu_rx_size_reg}} :
+                             cpu_data_src == REG_VALID_PORTS   ? {7'b0, cpu_promiscuous_reg, 7'b0, local_enable, local_port} :
                              cpu_data_src == REG_PHY_STATUS    ? phy_status :
                              cpu_data_src == REG_PHY_CONTROL   ? phy_control :
                                                                  32'b0;

@@ -20,6 +20,7 @@ module gtx_quad(
     input         RXBUFRESET_IN,
     output  [3:0] RXBUFSTATUS_OUT,
     output  [7:0] RXLOSSOFSYNC_OUT,
+    input   [3:0] RXPOLARITY_IN,
     input         GTXRXRESET_IN,
     input         MGTREFCLKRX_IN,
     input         PLLRXRESET_IN,
@@ -89,10 +90,10 @@ generate for (I=0; I < 4; I=I+1) begin : gen_xaui_gtx
     .SIM_TXREFCLK_SOURCE                    (3'b000),
     .SIM_RXREFCLK_SOURCE                    (3'b000),
     //--------------------------TX PLL----------------------------
-    .TX_CLK_SOURCE                          ("TXPLL"),
+    .TX_CLK_SOURCE                          ("RXPLL"),
     .TX_OVERSAMPLE_MODE                     ("FALSE"),
     .TXPLL_COM_CFG                          (24'h21680a),
-    .TXPLL_CP_CFG                           (8'h39),
+    .TXPLL_CP_CFG                           (8'h0D),
     .TXPLL_DIVSEL_FB                        (2),
     .TXPLL_DIVSEL_OUT                       (1),
     .TXPLL_DIVSEL_REF                       (1),
@@ -103,6 +104,7 @@ generate for (I=0; I < 4; I=I+1) begin : gen_xaui_gtx
     .TX_TDCC_CFG                            (2'b11),
     .PMA_CAS_CLK_EN                         ("FALSE"),            
     .POWER_SAVE                             (10'b0000110100),
+                                             
     //-----------------------TX Interface-------------------------
     .GEN_TXUSRCLK                           ("TRUE"),
     .TX_DATA_WIDTH                          (20),
@@ -125,8 +127,8 @@ generate for (I=0; I < 4; I=I+1) begin : gen_xaui_gtx
     .TXGEARBOX_USE                          ("FALSE"),
     //--------------TX Driver and OOB Signalling------------------
     .TX_DRIVE_MODE                          ("DIRECT"),
-    .TX_IDLE_ASSERT_DELAY                   (3'b110),
-    .TX_IDLE_DEASSERT_DELAY                 (3'b100),
+    .TX_IDLE_ASSERT_DELAY                   (3'b101),
+    .TX_IDLE_DEASSERT_DELAY                 (3'b011),
     .TXDRIVE_LOOPBACK_HIZ                   ("FALSE"),
     .TXDRIVE_LOOPBACK_PD                    ("FALSE"),
     //------------TX Pipe Control for PCI Express/SATA------------
@@ -147,7 +149,7 @@ generate for (I=0; I < 4; I=I+1) begin : gen_xaui_gtx
     //--------------------------RX PLL----------------------------
     .RX_OVERSAMPLE_MODE                     ("FALSE"),
     .RXPLL_COM_CFG                          (24'h21680a),
-    .RXPLL_CP_CFG                           (8'h39),
+    .RXPLL_CP_CFG                           (8'h0D),
     .RXPLL_DIVSEL_FB                        (2),
     .RXPLL_DIVSEL_OUT                       (1),
     .RXPLL_DIVSEL_REF                       (1),
@@ -186,13 +188,15 @@ generate for (I=0; I < 4; I=I+1) begin : gen_xaui_gtx
     .RX_EYE_OFFSET                          (8'h4C),
     .RX_EYE_SCANMODE                        (2'b00),
     //-----------------------PRBS Detection-----------------------
+    .RXPRBSERR_LOOPBACK                     (1'b0),
     //----------------Comma Detection and Alignment---------------
     .ALIGN_COMMA_WORD                       (1),
     .COMMA_10B_ENABLE                       (10'b0001111111),
     .COMMA_DOUBLE                           ("FALSE"),
     .DEC_MCOMMA_DETECT                      ("TRUE"),
     .DEC_PCOMMA_DETECT                      ("TRUE"),
-    .DEC_VALID_COMMA_ONLY                   ("TRUE"),
+    .DEC_VALID_COMMA_ONLY                   ("FALSE"),
+    //.DEC_VALID_COMMA_ONLY                   ("TRUE"),
     .MCOMMA_10B_VALUE                       (10'b1010000011),
     .MCOMMA_DETECT                          ("TRUE"),
     .PCOMMA_10B_VALUE                       (10'b0101111100),
@@ -200,7 +204,7 @@ generate for (I=0; I < 4; I=I+1) begin : gen_xaui_gtx
     .RX_DECODE_SEQ_MATCH                    ("TRUE"),
     .RX_SLIDE_AUTO_WAIT                     (5),
     .RX_SLIDE_MODE                          ("OFF"),
-    .SHOW_REALIGN_COMMA                     ("TRUE"),
+    .SHOW_REALIGN_COMMA                     ("FALSE"),
     //---------------RX Loss-of-sync State Machine----------------
     .RX_LOS_INVALID_INCR                    (1),
     .RX_LOS_THRESHOLD                       (4),
@@ -343,7 +347,8 @@ generate for (I=0; I < 4; I=I+1) begin : gen_xaui_gtx
     //----- Receive Ports - RX Driver,OOB signalling,Coupling and Eq.,CDR ------
     .GATERXELECIDLE                 (1'b0),
     .IGNORESIGDET                   (1'b0),
-    .RXCDRRESET                     (RXCDRRESET_IN),
+    //.RXCDRRESET                     (RXCDRRESET_IN),
+    .RXCDRRESET                     (1'b0),
     .RXELECIDLE                     (RXELECIDLE_OUT[I]),
     .RXEQMIX                        ({7'b0,RXEQMIX_IN}),
     .RXN                            (RXN_IN[I]),
@@ -354,8 +359,9 @@ generate for (I=0; I < 4; I=I+1) begin : gen_xaui_gtx
     .RXCHANISALIGNED                (),
     .RXCHANREALIGN                  (),
     .RXDLYALIGNDISABLE              (1'b1),
+    .RXDLYALIGNMONENB               (1'b1),
     .RXDLYALIGNMONITOR              (),
-    .RXDLYALIGNOVERRIDE             (1'b0),
+    .RXDLYALIGNOVERRIDE             (1'b1),
     .RXDLYALIGNRESET                (1'b0),
     .RXDLYALIGNSWPPRECURB           (1'b1),
     .RXDLYALIGNUPDSW                (1'b0),
@@ -386,7 +392,7 @@ generate for (I=0; I < 4; I=I+1) begin : gen_xaui_gtx
     .PHYSTATUS                      (),
     .RXVALID                        (),
     //--------------- Receive Ports - RX Polarity Control Ports ----------------
-    .RXPOLARITY                     (1'b0),
+    .RXPOLARITY                     (RXPOLARITY_IN[I]),
     //------------------- Receive Ports - RX Ports for SATA --------------------
     .COMINITDET                     (),
     .COMSASDET                      (),

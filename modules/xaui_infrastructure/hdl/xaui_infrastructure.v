@@ -1,5 +1,6 @@
 module xaui_infrastructure #(
-    parameter ENABLE_MASK = 8'b1111_1111
+    parameter ENABLE_MASK   = 8'b1111_1111,
+    parameter RX_LANE_STEER = 0
   ) (
     input             mgt_reset,
 
@@ -41,6 +42,16 @@ module xaui_infrastructure #(
 
     output [8*16-1:0] mgt_status
   );
+
+  /* RX Byte steering defines */
+  wire [8*64-1:0] mgt_rxdata_swap;
+  wire  [8*8-1:0] mgt_rxcharisk_swap;
+  wire  [8*8-1:0] mgt_rxcodecomma_swap;
+  wire  [8*4-1:0] mgt_rxencommaalign_swap;
+  wire  [8*4-1:0] mgt_rxsyncok_swap;
+  wire  [8*8-1:0] mgt_rxcodevalid_swap;
+  wire  [8*4-1:0] mgt_rxbufferr_swap;
+  wire  [8*4-1:0] mgt_rxelecidle_swap;
 
   wire [2:0] gtx_refclk;
   wire [2:0] pma_reset;
@@ -98,7 +109,7 @@ module xaui_infrastructure #(
     end
   end
 
-  assign pma_reset = {reset_r[2], reset_r[1], reset_r[0]};
+  assign pma_reset = {reset_r[2][3], reset_r[1][3], reset_r[0][3]};
 
   /* Which pma resets and gtx_refclks go where */
   wire [7:0] pma_reset_map;
@@ -108,16 +119,18 @@ module xaui_infrastructure #(
      Note that all clocks are generated from the source source using a PLL, this means
      that we can use one clock for all application interfaces */
   wire [8*4-1:0] gtxclk_out_map;
-  assign gtx_clk_o = gtxclk_out_map[0];
+  assign gtx_clk_o = gtxclk_out_map[2];
 
   wire [8*8-1:0] mgt_rxdisperror;
   wire [8*8-1:0] mgt_rxnotintable;
-  assign mgt_rxcodevalid = ~(mgt_rxdisperror | mgt_rxnotintable);
+  assign mgt_rxcodevalid_swap = ~(mgt_rxdisperror | mgt_rxnotintable);
 
   wire [8*8-1:0] rxlossofsync;
 
   wire [8*4-1:0] rx_resetdone;
   wire [8*4-1:0] tx_resetdone;
+
+  wire [8*4-1:0] rx_polarity = 32'hffff_ffff;
 
   genvar I;
 generate for (I=0; I < 8; I=I+1) begin : gtx_wrap_gen
@@ -128,28 +141,27 @@ generate for (I=0; I < 8; I=I+1) begin : gtx_wrap_gen
     .RXPOWERDOWN_IN                 (mgt_powerdown[I]),
     .TXPOWERDOWN_IN                 (mgt_powerdown[I]),
     //--------------------- Receive Ports - 8b10b Decoder ----------------------
-    .RXCHARISCOMMA_OUT              (mgt_rxcodecomma[I*8+:8]),
-    .RXCHARISK_OUT                  (mgt_rxcharisk[I*8+:8]),
+    .RXCHARISCOMMA_OUT              (mgt_rxcodecomma_swap[I*8+:8]),
+    .RXCHARISK_OUT                  (mgt_rxcharisk_swap[I*8+:8]),
     .RXDISPERR_OUT                  (mgt_rxdisperror[I*8+:8]),
     .RXNOTINTABLE_OUT               (mgt_rxnotintable[I*8+:8]),
     //------------- Receive Ports - Comma Detection and Alignment --------------
-    .RXENMCOMMAALIGN_IN             (mgt_rxencommaalign[I*4+:4]),
-    .RXENPCOMMAALIGN_IN             (mgt_rxencommaalign[I*4+:4]),
-
+    .RXENMCOMMAALIGN_IN             (mgt_rxencommaalign_swap[I*4+:4]),
+    .RXENPCOMMAALIGN_IN             (mgt_rxencommaalign_swap[I*4+:4]),
     .RXENCHANSYNC_IN                (mgt_rxenchansync[I]),
     //----------------- Receive Ports - RX Data Path interface -----------------
-    .RXDATA_OUT                     (mgt_rxdata[I*64+:64]),
-    .RXRESET_IN                     (gtx_rx_reset),
+    .RXDATA_OUT                     (mgt_rxdata_swap[I*64+:64]),
+    .RXRESET_IN                     (mgt_rx_rst[I]),
     .RXUSRCLK2_IN                   (xaui_clk),
     //----- Receive Ports - RX Driver,OOB signalling,Coupling and Eq.,CDR ------
     .RXCDRRESET_IN                  (pma_reset_map[I]),
-    .RXELECIDLE_OUT                 (mgt_rxelecidle[I*4+:4]),
+    .RXELECIDLE_OUT                 (mgt_rxelecidle_swap[I*4+:4]),
     .RXEQMIX_IN                     (mgt_rxeqmix[I*3+:3]),
     .RXN_IN                         (mgt_rx_n[I*4+:4]),
     .RXP_IN                         (mgt_rx_p[I*4+:4]),
     //------ Receive Ports - RX Elastic Buffer and Phase Alignment Ports -------
-    .RXBUFRESET_IN                  (gtx_rx_reset),
-    .RXBUFSTATUS_OUT                (mgt_rxbufferr[I*4+:4]),
+    .RXBUFRESET_IN                  (mgt_rx_rst[I]),
+    .RXBUFSTATUS_OUT                (mgt_rxbufferr_swap[I*4+:4]),
     //------------- Receive Ports - RX Loss-of-sync State Machine --------------
     .RXLOSSOFSYNC_OUT               (rxlossofsync[I*8+:8]),
     //---------------------- Receive Ports - RX PLL Ports ----------------------
@@ -158,12 +170,13 @@ generate for (I=0; I < 8; I=I+1) begin : gtx_wrap_gen
     .PLLRXRESET_IN                  (pma_reset_map[I]),
     .RXPLLLKDET_OUT                 (mgt_rxlock[I*4+:4]),
     .RXRESETDONE_OUT                (rx_resetdone[I*4+:4]),
+    .RXPOLARITY_IN                  (rx_polarity[I*4+:4]),
     //---------------- Transmit Ports - TX Data Path interface -----------------
     .TXCHARISK_IN                   (mgt_txcharisk[I*8+:8]),
     .TXDATA_IN                      (mgt_txdata[I*64+:64]),
 
     .TXOUTCLK_OUT                   (gtxclk_out_map[I*4+:4]),        
-    .TXRESET_IN                     (gtx_tx_reset),
+    .TXRESET_IN                     (mgt_tx_rst[I]),
     .TXUSRCLK2_IN                   (xaui_clk),
     //-------------- Transmit Ports - TX Driver and OOB signaling --------------
     .TXDIFFCTRL_IN                  (mgt_txdiffctrl[I*4+:4]),
@@ -179,7 +192,7 @@ generate for (I=0; I < 8; I=I+1) begin : gtx_wrap_gen
     .TXRESETDONE_OUT                (tx_resetdone[I*4+:4])
   );
 
-  assign mgt_rxsyncok[I*4+:4] = {rxlossofsync[I*8+7],
+  assign mgt_rxsyncok_swap[I*4+:4] = {rxlossofsync[I*8+7],
                                  rxlossofsync[I*8+5],
                                  rxlossofsync[I*8+3],
                                  rxlossofsync[I*8+1]};
@@ -196,6 +209,63 @@ end endgenerate
   assign pma_reset_map = { pma_reset[2],  pma_reset[2],  pma_reset[2],
                            pma_reset[1],  pma_reset[1],  pma_reset[1],
                            pma_reset[0],  pma_reset[0]};
+
+
+  /**** RX rerouting to compensate for crossover at XAUI endpoint ****/
+
+generate if (!RX_LANE_STEER) begin : no_rx_steer
+  assign  mgt_rxdata      = mgt_rxdata_swap;
+  assign  mgt_rxcharisk   = mgt_rxcharisk_swap;
+  assign  mgt_rxcodecomma = mgt_rxcodecomma_swap;
+  assign  mgt_rxsyncok    = mgt_rxsyncok_swap;
+  assign  mgt_rxcodevalid = mgt_rxcodevalid_swap;
+  assign  mgt_rxbufferr   = mgt_rxbufferr_swap;
+
+  assign mgt_rxencommaalign_swap = mgt_rxencommaalign;
+
+end else begin : rx_steer
+
+  assign  mgt_rxdata      = {mgt_rxdata_swap[15:0 ],
+                             mgt_rxdata_swap[31:16],
+                             mgt_rxdata_swap[47:32],
+                             mgt_rxdata_swap[61:48]};
+
+  assign  mgt_rxcharisk   = {mgt_rxcharisk_swap[1:0], 
+                             mgt_rxcharisk_swap[3:2], 
+                             mgt_rxcharisk_swap[5:4], 
+                             mgt_rxcharisk_swap[7:6]};
+
+  assign  mgt_rxcodecomma = {mgt_rxcodecomma_swap[1:0], 
+                             mgt_rxcodecomma_swap[3:2], 
+                             mgt_rxcodecomma_swap[5:4], 
+                             mgt_rxcodecomma_swap[7:6]};
+
+  assign  mgt_rxsyncok    = {mgt_rxsyncok_swap[0], 
+                             mgt_rxsyncok_swap[1], 
+                             mgt_rxsyncok_swap[2], 
+                             mgt_rxsyncok_swap[3]};
+
+  assign  mgt_rxcodevalid = {mgt_rxcodevalid_swap[1:0],
+                             mgt_rxcodevalid_swap[3:2],
+                             mgt_rxcodevalid_swap[5:4],
+                             mgt_rxcodevalid_swap[7:6]};
+
+  assign  mgt_rxbufferr   = {mgt_rxbufferr_swap[0],
+                             mgt_rxbufferr_swap[1],
+                             mgt_rxbufferr_swap[2],
+                             mgt_rxbufferr_swap[3]};
+
+  assign  mgt_rxelecidle   = {mgt_rxelecidle_swap[0],
+                              mgt_rxelecidle_swap[1],
+                              mgt_rxelecidle_swap[2],
+                              mgt_rxelecidle_swap[3]};
+
+  assign mgt_rxencommaalign_swap = {mgt_rxencommaalign[0],
+                                    mgt_rxencommaalign[1],
+                                    mgt_rxencommaalign[2],
+                                    mgt_rxencommaalign[3]};
+
+end endgenerate
 
   
 endmodule
