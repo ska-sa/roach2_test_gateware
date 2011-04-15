@@ -164,7 +164,7 @@ module phy_dqs_iob #
   // for the read phase detector
   //***************************************************************************
       
-  IODELAYE1 #
+  (* IODELAY_GROUP = IODELAY_GRP *) IODELAYE1 #
     (
      .CINVCTRL_SEL          ("FALSE"),
      .DELAY_SRC             ("IO"),

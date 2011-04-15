@@ -11,7 +11,7 @@ module toplevel(
     output         aux_synco_n,
     output         aux_synco_p,
 
-    inout   [11:0] v6_gpio,
+    inout   [15:0] v6_gpio,
 
     input          ppc_perclk,
     input   [5:29] ppc_paddr,
@@ -915,32 +915,29 @@ module toplevel(
 
 /*********** DRAM *************/
 
+  wire ddr3_clk_rd_base;
   wire ddr3_clk_mem;
   wire ddr3_clk_div2;
   wire ddr3_rst_div2;
 
   wire ddr3_pll_lock;
 
-  clk_gen #(
-    .CLK_FREQ (250)
-  ) clk_gen_ddr3 (
-    .clk_100  (sys_clk),
-    .reset    (sys_rst),
-    .clk0     (ddr3_clk_mem),
-    .clk180   (),
-    .clk270   (),
-    .clkdiv2  (ddr3_clk_div2),
-    .pll_lock (ddr3_pll_lock)
+  ddr3_clk #(
+    .DRAM_FREQUENCY (400)
+  ) ddr3_clk_inst (
+    .clk_100          (sys_clk),       
+    .sys_rst          (sys_rst),        
+    .iodelay_ctrl_rdy (idelay_rdy),
+
+    .clk_mem          (ddr3_clk_mem),     // 2x logic clock
+    .clk_app          (ddr3_clk_div2),    // 1x logic clock
+    .clk_rd_base      (ddr3_clk_rd_base), // 2x base read clock
+
+    .rstdiv0          (ddr3_rst_div2),    // Reset CLK and CLKDIV logic (incl I/O),
+    .PSEN             (1'b0),
+    .PSINCDEC         (1'b0),
+    .PSDONE           ()
   );
-
-  reg ddr3_rstR;
-  reg ddr3_rstRR;
-
-  always @(posedge ddr3_clk_div2) begin
-    ddr3_rstR  <= sys_rst || !ddr3_pll_lock || !idelay_rdy;
-    ddr3_rstRR <= ddr3_rstR;
-  end
-  assign ddr3_rst_div2 = ddr3_rstRR;
 
 `ifdef ENABLE_DDR3
 
@@ -980,6 +977,7 @@ module toplevel(
     .clk_mem           (ddr3_clk_mem),
     .clk_div2          (ddr3_clk_div2),
     .rst_div2          (ddr3_rst_div2),
+    .clk_rd_base       (ddr3_clk_rd_base),
 
     .ddr3_dq           (ddr3_dq),
     .ddr3_addr         (ddr3_a),

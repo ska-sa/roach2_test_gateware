@@ -432,7 +432,7 @@ module phy_dm_iob #
        );
 
   // Output of OSERDES drives IODELAY (ODELAY)
-  IODELAYE1 #
+  (* IODELAY_GROUP = IODELAY_GRP *) IODELAYE1 #
     (
      .CINVCTRL_SEL          ("FALSE"),
      .DELAY_SRC             ("O"),

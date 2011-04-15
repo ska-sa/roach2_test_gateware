@@ -78,7 +78,7 @@
 ******************************************************************************/
 
 `timescale 1ps/1ps
-(* X_CORE_INFO = "mig_v3_61_ddr3_V6, Coregen 12.4" , CORE_GENERATION_INFO = "ddr3_V6,mig_v3_61,{LANGUAGE=Verilog, SYNTHESIS_TOOL=ISE, LEVEL=PHY, AXI_ENABLE=0, NO_OF_CONTROLLERS=1, INTERFACE_TYPE=DDR3, CLK_PERIOD=2500, MEMORY_TYPE=RDIMM, MEMORY_PART=test, DQ_WIDTH=72, ECC=OFF, DATA_MASK=1, BURST_MODE=8, BURST_TYPE=SEQ, OUTPUT_DRV=HIGH, RTT_NOM=60, REFCLK_FREQ=200, MMCM_ADV_BANDWIDTH=MMCM_ADV_BANDWIDTH, CLKFBOUT_MULT_F=6, CLKOUT_DIVIDE=3, DEBUG_PORT=OFF, IODELAY_HP_MODE=ON, INTERNAL_VREF=0, DCI_INOUTS=1, CLASS_ADDR=II, INPUT_CLK_TYPE=DIFFERENTIAL}" *)
+(* X_CORE_INFO = "mig_v3_61_ddr3_V6, Coregen 12.4" , CORE_GENERATION_INFO = "ddr3_V6,mig_v3_61,{LANGUAGE=Verilog, SYNTHESIS_TOOL=ISE, LEVEL=PHY, AXI_ENABLE=0, NO_OF_CONTROLLERS=1, INTERFACE_TYPE=DDR3, CLK_PERIOD=2500, MEMORY_TYPE=RDIMM, MEMORY_PART=mt9jsf25672pz-1g4, DQ_WIDTH=72, ECC=OFF, DATA_MASK=0, BURST_MODE=8, BURST_TYPE=SEQ, OUTPUT_DRV=HIGH, RTT_NOM=60, REFCLK_FREQ=200, MMCM_ADV_BANDWIDTH=MMCM_ADV_BANDWIDTH, CLKFBOUT_MULT_F=6, CLKOUT_DIVIDE=3, DEBUG_PORT=OFF, IODELAY_HP_MODE=ON, INTERNAL_VREF=1, DCI_INOUTS=1, CLASS_ADDR=I, INPUT_CLK_TYPE=DIFFERENTIAL}" *)
 module phy_top #
   (
    parameter TCQ             = 100,
@@ -211,7 +211,7 @@ module phy_top #
    output [CS_WIDTH*nCS_PER_RANK-1:0] ddr_cs_n,
    output [CKE_WIDTH-1:0]             ddr_cke,
    output [CS_WIDTH*nCS_PER_RANK-1:0] ddr_odt,
-   inout                              ddr_reset_n,
+   output                             ddr_reset_n,
    output                             ddr_parity,
    output [DM_WIDTH-1:0]              ddr_dm,
    inout [DQS_WIDTH-1:0]              ddr_dqs_p,

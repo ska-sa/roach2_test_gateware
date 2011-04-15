@@ -269,7 +269,7 @@ module mem_intfc #
   output [DM_WIDTH-1:0]     ddr_dm;             // From phy_top0 of phy_top.v
   output [CS_WIDTH*nCS_PER_RANK-1:0] ddr_odt;   // From phy_top0 of phy_top.v
   output                    ddr_ras_n;          // From phy_top0 of phy_top.v
-  inout                    ddr_reset_n;        // From phy_top0 of phy_top.v
+  output                    ddr_reset_n;        // From phy_top0 of phy_top.v
   output                    ddr_parity;
   output                    ddr_we_n;           // From phy_top0 of phy_top.v
   output                    dfi_init_complete;

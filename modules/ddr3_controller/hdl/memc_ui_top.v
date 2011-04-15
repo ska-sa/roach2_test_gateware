@@ -67,7 +67,7 @@
 //*****************************************************************************
 
 `timescale 1 ps / 1 ps
-(* X_CORE_INFO = "mig_v3_61_ddr3_V6, Coregen 12.4" , CORE_GENERATION_INFO = "ddr3_V6,mig_v3_61,{LANGUAGE=Verilog, SYNTHESIS_TOOL=ISE, LEVEL=CONTROLLER, AXI_ENABLE=0, NO_OF_CONTROLLERS=1, INTERFACE_TYPE=DDR3, CLK_PERIOD=2500, MEMORY_TYPE=RDIMM, MEMORY_PART=test, DQ_WIDTH=72, ECC=OFF, DATA_MASK=1, BURST_MODE=8, BURST_TYPE=SEQ, OUTPUT_DRV=HIGH, RTT_NOM=60, REFCLK_FREQ=200, MMCM_ADV_BANDWIDTH=MMCM_ADV_BANDWIDTH, CLKFBOUT_MULT_F=6, CLKOUT_DIVIDE=3, DEBUG_PORT=OFF, IODELAY_HP_MODE=ON, INTERNAL_VREF=0, DCI_INOUTS=1, CLASS_ADDR=II, INPUT_CLK_TYPE=DIFFERENTIAL}" *)
+(* X_CORE_INFO = "mig_v3_61_ddr3_V6, Coregen 12.4" , CORE_GENERATION_INFO = "ddr3_V6,mig_v3_61,{LANGUAGE=Verilog, SYNTHESIS_TOOL=ISE, LEVEL=CONTROLLER, AXI_ENABLE=0, NO_OF_CONTROLLERS=1, INTERFACE_TYPE=DDR3, CLK_PERIOD=2500, MEMORY_TYPE=RDIMM, MEMORY_PART=mt9jsf25672pz-1g4, DQ_WIDTH=72, ECC=OFF, DATA_MASK=0, BURST_MODE=8, BURST_TYPE=SEQ, OUTPUT_DRV=HIGH, RTT_NOM=60, REFCLK_FREQ=200, MMCM_ADV_BANDWIDTH=MMCM_ADV_BANDWIDTH, CLKFBOUT_MULT_F=6, CLKOUT_DIVIDE=3, DEBUG_PORT=OFF, IODELAY_HP_MODE=ON, INTERNAL_VREF=1, DCI_INOUTS=1, CLASS_ADDR=I, INPUT_CLK_TYPE=DIFFERENTIAL}" *)
 module memc_ui_top #
   (
    parameter REFCLK_FREQ             = 200,
@@ -112,13 +112,13 @@ module memc_ui_top #
                                        // # of CK/CK# outputs to memory.
    parameter CKE_WIDTH               = 1,
                                        // # of CKE outputs to memory.
-   parameter COL_WIDTH               = 10,
+   parameter COL_WIDTH               = 11,
                                        // # of memory Column Address bits.
    parameter CS_WIDTH                = 1,
                                        // # of unique CS outputs to memory.
    parameter DM_WIDTH                = 9,
                                        // # of Data Mask bits.
-   parameter USE_DM_PORT             = 1,
+   parameter USE_DM_PORT             = 0,
                                        // # = 1, When Data Mask option is enabled
                                        //   = 0, When Data Mask option is disbaled
                                        // When Data Mask option is disbaled in
@@ -222,9 +222,9 @@ module memc_ui_top #
                                        //   = "OFF" - Components, SODIMMs, UDIMMs.
    parameter nDQS_COL0               = 3,
                                        // Number of DQS groups in I/O column #1.
-   parameter nDQS_COL1               = 6,
+   parameter nDQS_COL1               = 0,
                                        // Number of DQS groups in I/O column #2.
-   parameter nDQS_COL2               = 0,
+   parameter nDQS_COL2               = 6,
                                        // Number of DQS groups in I/O column #3.
    parameter nDQS_COL3               = 0,
                                        // Number of DQS groups in I/O column #4.
@@ -239,21 +239,21 @@ module memc_ui_top #
    parameter tCK                     = 2500,
                                        // memory tCK paramter.
                                        // # = Clock Period.
-   parameter tFAW                    = 37500,
+   parameter tFAW                    = 30000,
                                        // memory tRAW paramter.
    parameter tPRDI                   = 1_000_000,
                                        // memory tPRDI paramter.
-   parameter tRRD                    = 7500,
+   parameter tRRD                    = 6000,
                                        // memory tRRD paramter.
-   parameter tRAS                    = 37500,
+   parameter tRAS                    = 36000,
                                        // memory tRAS paramter.
-   parameter tRCD                    = 13125,
+   parameter tRCD                    = 13500,
                                        // memory tRCD paramter.
    parameter tREFI                   = 7800000,
                                        // memory tREFI paramter.
-   parameter tRFC                    = 110000,
+   parameter tRFC                    = 160000,
                                        // memory tRFC paramter.
-   parameter tRP                     = 13125,
+   parameter tRP                     = 13500,
                                        // memory tRP paramter.
    parameter tRTP                    = 7500,
                                        // memory tRTP paramter.
@@ -270,7 +270,7 @@ module memc_ui_top #
    parameter DEBUG_PORT              = "OFF",
                                        // # = "ON" Enable debug signals/controls.
                                        //   = "OFF" Disable debug signals/controls.
-   parameter ADDR_WIDTH              = 29,
+   parameter ADDR_WIDTH              = 30,
                                        // # = RANK_WIDTH + BANK_WIDTH
                                        //     + ROW_WIDTH + COL_WIDTH;
    parameter STARVE_LIMIT            = 2,
@@ -301,7 +301,7 @@ module memc_ui_top #
    output [DM_WIDTH-1:0]              ddr_dm,
    output [CS_WIDTH*nCS_PER_RANK-1:0] ddr_odt,
    output                             ddr_ras_n,
-   inout                             ddr_reset_n,
+   output                             ddr_reset_n,
    output                             ddr_parity,
    output                             ddr_we_n,
    inout [DQ_WIDTH-1:0]               ddr_dq,

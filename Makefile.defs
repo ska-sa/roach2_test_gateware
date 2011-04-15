@@ -12,7 +12,7 @@ REV_MINOR=0
 RCS_UPTODATE=0
 REV_RCS=0
 # Pin Constraints
-PCFILE=constraints/roach2_rev0.ucf
+PCFILE=constraints/roach2_rev1.ucf
 # Enter your source files here space seperated
 #      Note: no spaces in filenames
 
@@ -39,6 +39,7 @@ SRC=./modules/toplevel/hdl/toplevel.v \
 		./modules/qdr_controller_softcal/hdl/qdrc_phy_align.v \
 		./modules/qdr_controller_softcal/hdl/qdrc_cpu_attach.v \
 		./modules/qdr_cpu_interface/hdl/qdr_cpu_interface.v \
+		./modules/ddr3_clk/hdl/ddr3_clk.v \
 		./modules/ddr3_controller/hdl/arb_mux.v \
 		./modules/ddr3_controller/hdl/arb_row_col.v \
 		./modules/ddr3_controller/hdl/arb_select.v \

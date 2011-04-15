@@ -186,7 +186,7 @@ module phy_ck_iob #
 
       assign ck_p_out = ck_p_odelay;
       
-      IODELAYE1 #
+      (* IODELAY_GROUP = IODELAY_GRP *) IODELAYE1 #
         (
          .CINVCTRL_SEL          ("FALSE"),
          .DELAY_SRC             ("O"),

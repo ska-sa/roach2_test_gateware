@@ -188,7 +188,7 @@ module phy_dq_iob #
   // Programmable Delay element - used for both input and output paths
   //***************************************************************************
 
-  IODELAYE1 #
+  (* IODELAY_GROUP = IODELAY_GRP *) IODELAYE1 #
     (
      .CINVCTRL_SEL          ("FALSE"),
      .DELAY_SRC             ("IO"),

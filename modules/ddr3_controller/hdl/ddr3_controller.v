@@ -205,6 +205,7 @@ module ddr3_controller #
 
    input                             clk_div2,
    input                             rst_div2,
+   input                             clk_rd_base,
 
    inout  [DQ_WIDTH-1:0]                ddr3_dq,
    output [ROW_WIDTH-1:0]               ddr3_addr,
@@ -295,7 +296,7 @@ module ddr3_controller #
   (
    .clk                              (clk_div2),
    .clk_mem                          (clk_mem),
-   .clk_rd_base                      (clk_div2),
+   .clk_rd_base                      (clk_rd_base),
    .rst                              (rst_div2),
    .ddr_addr                         (ddr3_addr),
    .ddr_ba                           (ddr3_ba),

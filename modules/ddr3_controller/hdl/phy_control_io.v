@@ -144,7 +144,7 @@ module phy_control_io #
    output [CS_WIDTH*nCS_PER_RANK-1:0] ddr_cs_n,
    output [CS_WIDTH*nCS_PER_RANK-1:0] ddr_odt,
    output                             ddr_parity,
-   inout                              ddr_reset_n
+   output                             ddr_reset_n
    );
 
   // Set performance mode for IODELAY (power vs. performance tradeoff)
@@ -431,7 +431,7 @@ module phy_control_io #
         
       assign ddr_ras_n = ras_n_odelay;
 
-      IODELAYE1 #
+      (* IODELAY_GROUP = IODELAY_GRP *) IODELAYE1 #
         (
          .CINVCTRL_SEL          ("FALSE"),
          .DELAY_SRC             ("O"),
@@ -522,7 +522,7 @@ module phy_control_io #
 
       assign ddr_cas_n = cas_n_odelay;
       
-      IODELAYE1 #
+      (* IODELAY_GROUP = IODELAY_GRP *) IODELAYE1 #
         (
          .CINVCTRL_SEL          ("FALSE"),
          .DELAY_SRC             ("O"),
@@ -613,7 +613,7 @@ module phy_control_io #
 
       assign ddr_we_n = we_n_odelay;
 
-      IODELAYE1 #
+      (* IODELAY_GROUP = IODELAY_GRP *) IODELAYE1 #
         (
          .CINVCTRL_SEL          ("FALSE"),
          .DELAY_SRC             ("O"),
@@ -707,7 +707,7 @@ module phy_control_io #
 
         assign ddr_cke[cke_i] = cke_odelay[cke_i];
           
-        IODELAYE1 #
+        (* IODELAY_GROUP = IODELAY_GRP *) IODELAYE1 #
           (
            .CINVCTRL_SEL          ("FALSE"),
            .DELAY_SRC             ("O"),
@@ -809,7 +809,7 @@ module phy_control_io #
 
         assign ddr_cs_n[cs_i] = cs_n_odelay[cs_i];
           
-        IODELAYE1 #
+        (* IODELAY_GROUP = IODELAY_GRP *) IODELAYE1 #
           (
            .CINVCTRL_SEL          ("FALSE"),
            .DELAY_SRC             ("O"),
@@ -904,7 +904,7 @@ module phy_control_io #
 
         assign ddr_addr[addr_i] = addr_odelay[addr_i];
           
-        IODELAYE1 #
+        (* IODELAY_GROUP = IODELAY_GRP *) IODELAYE1 #
           (
            .CINVCTRL_SEL          ("FALSE"),
            .DELAY_SRC             ("O"),
@@ -999,7 +999,7 @@ module phy_control_io #
 
         assign ddr_ba[ba_i] = ba_odelay[ba_i];
           
-        IODELAYE1 #
+        (* IODELAY_GROUP = IODELAY_GRP *) IODELAYE1 #
           (
            .CINVCTRL_SEL          ("FALSE"),
            .DELAY_SRC             ("O"),
@@ -1095,7 +1095,7 @@ module phy_control_io #
 
         assign ddr_odt[odt_i] = odt_odelay[odt_i];
           
-        IODELAYE1 #
+        (* IODELAY_GROUP = IODELAY_GRP *) IODELAYE1 #
           (
            .CINVCTRL_SEL          ("FALSE"),
            .DELAY_SRC             ("O"),
@@ -1192,7 +1192,7 @@ module phy_control_io #
       
       assign ddr_parity = parity_odelay;
           
-      IODELAYE1 #
+      (* IODELAY_GROUP = IODELAY_GRP *) IODELAYE1 #
         (
          .CINVCTRL_SEL          ("FALSE"),
          .DELAY_SRC             ("O"),

@@ -424,12 +424,468 @@ module phy_rdclk_gen #
     genvar ck_i;
     for (ck_i = 0; ck_i < DQS_WIDTH; ck_i = ck_i+1) begin: gen_ck_cpt
 
-      assign clk_cpt[ck_i] = clk_mem;
+      OSERDESE1 #
+        (
+         .DATA_RATE_OQ   ("DDR"),
+         .DATA_RATE_TQ   ("DDR"),
+         .DATA_WIDTH     (4),
+         .DDR3_DATA      (0),
+         .INIT_OQ        (1'b0),
+         .INIT_TQ        (1'b0),
+         .INTERFACE_TYPE ("MEMORY_DDR3"),
+         .ODELAY_USED    (0),
+         .SERDES_MODE    ("MASTER"),
+         .SRVAL_OQ       (1'b0),
+         .SRVAL_TQ       (1'b0),
+         .TRISTATE_WIDTH (4)
+         )
+        u_oserdes_cpt
+          (
+           .OCBEXTEND    (ocbextend_cpt[ck_i]),
+           .OFB          (cpt_oserdes[ck_i]),
+           .OQ           (),
+           .SHIFTOUT1    (),
+           .SHIFTOUT2    (),
+           .TQ           (),
+           .CLK          (clk_mem),
+           .CLKDIV       (clk),
+           .CLKPERF      (clk_rd_base),
+           .CLKPERFDELAY (),
+           .D1           (en_clk_cpt_odd_r[ck_i]),  // Gating of fwd'ed clock
+           .D2           (1'b0),
+           .D3           (en_clk_cpt_even_r[ck_i]), // Gating of fwd'ed clock
+           .D4           (1'b0),
+           .D5           (),
+           .D6           (),
+           .ODV          (1'b0),
+           .OCE          (1'b1),
+           .SHIFTIN1     (),
+           .SHIFTIN2     (),
+           .RST          (rst_oserdes_cpt_r[ck_i]),
+           .T1           (1'b0),
+           .T2           (1'b0),
+           .T3           (1'b0),
+           .T4           (1'b0),
+           .TFB          (),
+           .TCE          (1'b1),
+           .WC           (wc_oserdes_r)
+           );
+
+      (* IODELAY_GROUP = IODELAY_GRP *) IODELAYE1 #
+        (
+         .CINVCTRL_SEL          ("FALSE"),
+         .DELAY_SRC             ("O"),
+         .HIGH_PERFORMANCE_MODE ("TRUE"),
+         .IDELAY_TYPE           ("FIXED"),
+         .IDELAY_VALUE          (0),      
+         .ODELAY_TYPE           ("VARIABLE"),
+         .ODELAY_VALUE          (0),
+         .REFCLK_FREQUENCY      (REFCLK_FREQ),
+         .SIGNAL_PATTERN        ("CLOCK")
+         )
+        u_odelay_cpt
+          (
+           .DATAOUT     (cpt_odelay[ck_i]),
+           .C           (clk),
+           .CE          (dlyce_cpt[ck_i]),
+           .DATAIN      (),
+           .IDATAIN     (),
+           .INC         (dlyinc_cpt[ck_i]),
+           .ODATAIN     (cpt_oserdes[ck_i]),
+           .RST         (dlyrst_cpt_r[ck_i]),
+           .T           (),
+           .CNTVALUEIN  (),
+           .CNTVALUEOUT (dbg_cpt_tap_cnt[5*ck_i+4:5*ck_i]),
+           .CLKIN       (),
+           .CINVCTRL    (1'b0)
+           );
+
+      BUFIO u_bufio_cpt
+        (
+         .I  (cpt_odelay[ck_i]),
+         .O  (clk_cpt_tmp[ck_i])
+         );
+
+      // Use for simulation purposes only
+      assign #0.1 clk_cpt[ck_i] = clk_cpt_tmp[ck_i];
 
     end
   endgenerate
 
+  //*******************************************************
+  // Resynchronization clock
+  //*******************************************************
 
-  assign clk_rsync = {4{clk}};
+  generate
+    // I/O column #1
+    if (nDQS_COL0 > 0) begin: gen_loop_col0
+      OSERDESE1 #
+        (
+         .DATA_RATE_OQ   ("DDR"),
+         .DATA_RATE_TQ   ("DDR"),
+         .DATA_WIDTH     (4),
+         .DDR3_DATA      (0),
+         .INIT_OQ        (1'b0),
+         .INIT_TQ        (1'b0),
+         .INTERFACE_TYPE ("MEMORY_DDR3"),
+         .ODELAY_USED    (0),
+         .SERDES_MODE    ("MASTER"),
+         .SRVAL_OQ       (1'b0),
+         .SRVAL_TQ       (1'b0),
+         .TRISTATE_WIDTH (4)
+         )
+        u_oserdes_rsync
+          (
+           .OCBEXTEND    (ocbextend_rsync[0]),
+           .OFB          (rsync_oserdes[0]),
+           .OQ           (),
+           .SHIFTOUT1    (),
+           .SHIFTOUT2    (),
+           .TQ           (),
+           .CLK          (clk_mem),
+           .CLKDIV       (clk),
+           .CLKPERF      (clk_rd_base),
+           .CLKPERFDELAY (),
+           .D1           (en_clk_rsync_odd_r[0]), // Gating of fwd'ed clock
+           .D2           (1'b0),
+           .D3           (en_clk_rsync_even_r[0]),// Gating of fwd'ed clock
+           .D4           (1'b0),
+           .D5           (),
+           .D6           (),
+           .ODV          (1'b0),
+           .OCE          (1'b1),
+           .SHIFTIN1     (),
+           .SHIFTIN2     (),
+           .RST          (rst_oserdes_rsync_r[0]),
+           .T1           (1'b0),
+           .T2           (1'b0),
+           .T3           (1'b0),
+           .T4           (1'b0),
+           .TFB          (),
+           .TCE          (1'b1),
+           .WC           (wc_oserdes_r)
+           );
+
+      (* IODELAY_GROUP = IODELAY_GRP *) IODELAYE1 #
+        (
+         .CINVCTRL_SEL          ("FALSE"),
+         .DELAY_SRC             ("O"),
+         .HIGH_PERFORMANCE_MODE ("TRUE"),
+         .IDELAY_TYPE           ("FIXED"),
+         .IDELAY_VALUE          (0),       
+         .ODELAY_TYPE           ("VARIABLE"),
+         .ODELAY_VALUE          (16),  // Set at midpt for CLKDIVINV cal
+         .REFCLK_FREQUENCY      (REFCLK_FREQ),
+         .SIGNAL_PATTERN        ("CLOCK")
+         )
+        u_odelay_rsync
+          (
+           .DATAOUT     (rsync_odelay[0]),
+           .C           (clk),
+           .CE          (dlyce_rsync[0]),
+           .DATAIN      (),
+           .IDATAIN     (),
+           .INC         (dlyinc_rsync[0]),
+           .ODATAIN     (rsync_oserdes[0]),
+           .RST         (dlyrst_rsync_r[0]),
+           .T           (),
+           .CNTVALUEIN  (),
+           .CNTVALUEOUT (dbg_rsync_tap_cnt[4:0]),          
+           .CLKIN       (),
+           .CINVCTRL    (1'b0)
+           );
+
+      BUFR #
+        (
+         .BUFR_DIVIDE ("2"),
+         .SIM_DEVICE  ("VIRTEX6")
+         )
+        u_bufr_rsync
+          (
+           .I   (rsync_odelay[0]),
+           .O   (rsync_bufr[0]),
+           .CE  (1'b1),
+           .CLR (rst_rsync[0])
+           );
+    end
+
+    // I/O column #2
+    if (nDQS_COL1 > 0) begin: gen_loop_col1
+      OSERDESE1 #
+        (
+         .DATA_RATE_OQ   ("DDR"),
+         .DATA_RATE_TQ   ("DDR"),
+         .DATA_WIDTH     (4),
+         .DDR3_DATA      (0),
+         .INIT_OQ        (1'b0),
+         .INIT_TQ        (1'b0),
+         .INTERFACE_TYPE ("MEMORY_DDR3"),
+         .ODELAY_USED    (0),
+         .SERDES_MODE    ("MASTER"),
+         .SRVAL_OQ       (1'b0),
+         .SRVAL_TQ       (1'b0),
+         .TRISTATE_WIDTH (4)
+         )
+        u_oserdes_rsync
+          (
+           .OCBEXTEND    (ocbextend_rsync[1]),
+           .OFB          (rsync_oserdes[1]),
+           .OQ           (),
+           .SHIFTOUT1    (),
+           .SHIFTOUT2    (),
+           .TQ           (),
+           .CLK          (clk_mem),
+           .CLKDIV       (clk),
+           .CLKPERF      (clk_rd_base),
+           .CLKPERFDELAY (),
+           .D1           (en_clk_rsync_odd_r[1]), // Gating of fwd'ed clock
+           .D2           (1'b0),
+           .D3           (en_clk_rsync_even_r[1]),// Gating of fwd'ed clock
+           .D4           (1'b0),
+           .D5           (),
+           .D6           (),
+           .ODV          (1'b0),
+           .OCE          (1'b1),
+           .SHIFTIN1     (),
+           .SHIFTIN2     (),
+           .RST          (rst_oserdes_rsync_r[1]),
+           .T1           (1'b0),
+           .T2           (1'b0),
+           .T3           (1'b0),
+           .T4           (1'b0),
+           .TFB          (),
+           .TCE          (1'b1),
+           .WC           (wc_oserdes_r)
+           );
+
+      (* IODELAY_GROUP = IODELAY_GRP *) IODELAYE1 #
+        (
+         .CINVCTRL_SEL          ("FALSE"),
+         .DELAY_SRC             ("O"),
+         .HIGH_PERFORMANCE_MODE ("TRUE"),
+         .IDELAY_TYPE           ("FIXED"), 
+         .IDELAY_VALUE          (0),       
+         .ODELAY_TYPE           ("VARIABLE"),
+         .ODELAY_VALUE          (16),  // Set at midpt for CLKDIVINV cal
+         .REFCLK_FREQUENCY      (REFCLK_FREQ),
+         .SIGNAL_PATTERN        ("CLOCK")
+         )
+        u_odelay_rsync
+          (
+           .DATAOUT     (rsync_odelay[1]),
+           .C           (clk),
+           .CE          (dlyce_rsync[1]),
+           .DATAIN      (),
+           .IDATAIN     (),
+           .INC         (dlyinc_rsync[1]),
+           .ODATAIN     (rsync_oserdes[1]),
+           .RST         (dlyrst_rsync_r[1]),
+           .T           (),
+           .CNTVALUEIN  (),
+           .CNTVALUEOUT (dbg_rsync_tap_cnt[9:5]),
+           .CLKIN       (),
+           .CINVCTRL    (1'b0)
+           );
+
+      BUFR #
+        (
+         .BUFR_DIVIDE ("2"),
+         .SIM_DEVICE  ("VIRTEX6")
+         )
+        u_bufr_rsync
+          (
+           .I   (rsync_odelay[1]),
+           .O   (rsync_bufr[1]),
+           .CE  (1'b1),
+           .CLR (rst_rsync[1])
+           );
+    end
+
+    // I/O column #3
+    if (nDQS_COL2 > 0) begin: gen_loop_col2
+      OSERDESE1 #
+        (
+         .DATA_RATE_OQ   ("DDR"),
+         .DATA_RATE_TQ   ("DDR"),
+         .DATA_WIDTH     (4),
+         .DDR3_DATA      (0),
+         .INIT_OQ        (1'b0),
+         .INIT_TQ        (1'b0),
+         .INTERFACE_TYPE ("MEMORY_DDR3"),
+         .ODELAY_USED    (0),
+         .SERDES_MODE    ("MASTER"),
+         .SRVAL_OQ       (1'b0),
+         .SRVAL_TQ       (1'b0),
+         .TRISTATE_WIDTH (4)
+         )
+        u_oserdes_rsync
+          (
+           .OCBEXTEND    (ocbextend_rsync[2]),
+           .OFB          (rsync_oserdes[2]),
+           .OQ           (),
+           .SHIFTOUT1    (),
+           .SHIFTOUT2    (),
+           .TQ           (),
+           .CLK          (clk_mem),
+           .CLKDIV       (clk),
+           .CLKPERF      (clk_rd_base),
+           .CLKPERFDELAY (),
+           .D1           (en_clk_rsync_odd_r[2]), // Gating of fwd'ed clock
+           .D2           (1'b0),
+           .D3           (en_clk_rsync_even_r[2]),// Gating of fwd'ed clock
+           .D4           (1'b0),
+           .D5           (),
+           .D6           (),
+           .ODV          (1'b0),
+           .OCE          (1'b1),
+           .SHIFTIN1     (),
+           .SHIFTIN2     (),
+           .RST          (rst_oserdes_rsync_r[2]),
+           .T1           (1'b0),
+           .T2           (1'b0),
+           .T3           (1'b0),
+           .T4           (1'b0),
+           .TFB          (),
+           .TCE          (1'b1),
+           .WC           (wc_oserdes_r)
+           );
+
+      (* IODELAY_GROUP = IODELAY_GRP *) IODELAYE1 #
+        (
+         .CINVCTRL_SEL          ("FALSE"),
+         .DELAY_SRC             ("O"),
+         .HIGH_PERFORMANCE_MODE ("TRUE"),
+         .IDELAY_TYPE           ("FIXED"), 
+         .IDELAY_VALUE          (0),       
+         .ODELAY_TYPE           ("VARIABLE"), 
+         .ODELAY_VALUE          (16),  // Set at midpt for CLKDIVINV cal
+         .REFCLK_FREQUENCY      (REFCLK_FREQ),
+         .SIGNAL_PATTERN        ("CLOCK")
+         )
+        u_odelay_rsync
+          (
+           .DATAOUT     (rsync_odelay[2]),
+           .C           (clk),
+           .CE          (dlyce_rsync[2]),
+           .DATAIN      (),
+           .IDATAIN     (),
+           .INC         (dlyinc_rsync[2]),
+           .ODATAIN     (rsync_oserdes[2]),
+           .RST         (dlyrst_rsync_r[2]),
+           .T           (),
+           .CNTVALUEIN  (),
+           .CNTVALUEOUT (dbg_rsync_tap_cnt[14:10]),
+           .CLKIN       (),
+           .CINVCTRL    (1'b0)
+           );
+
+      BUFR #
+        (
+         .BUFR_DIVIDE ("2"),
+         .SIM_DEVICE  ("VIRTEX6")
+         )
+        u_bufr_rsync
+          (
+           .I   (rsync_odelay[2]),
+           .O   (rsync_bufr[2]),
+           .CE  (1'b1),
+           .CLR (rst_rsync[2])
+           );
+    end
+
+    // I/O column #4
+    if (nDQS_COL3 > 0) begin: gen_loop_col3
+      OSERDESE1 #
+        (
+         .DATA_RATE_OQ   ("DDR"),
+         .DATA_RATE_TQ   ("DDR"),
+         .DATA_WIDTH     (4),
+         .DDR3_DATA      (0),
+         .INIT_OQ        (1'b0),
+         .INIT_TQ        (1'b0),
+         .INTERFACE_TYPE ("MEMORY_DDR3"),
+         .ODELAY_USED    (0),
+         .SERDES_MODE    ("MASTER"),
+         .SRVAL_OQ       (1'b0),
+         .SRVAL_TQ       (1'b0),
+         .TRISTATE_WIDTH (4)
+         )
+        u_oserdes_rsync
+          (
+           .OCBEXTEND    (ocbextend_rsync[3]),
+           .OFB          (rsync_oserdes[3]),
+           .OQ           (),
+           .SHIFTOUT1    (),
+           .SHIFTOUT2    (),
+           .TQ           (),
+           .CLK          (clk_mem),
+           .CLKDIV       (clk),
+           .CLKPERF      (clk_rd_base),
+           .CLKPERFDELAY (),
+           .D1           (en_clk_rsync_odd_r[3]), // Gating of fwd'ed clock
+           .D2           (1'b0),
+           .D3           (en_clk_rsync_even_r[3]),// Gating of fwd'ed clock
+           .D4           (1'b0),
+           .D5           (),
+           .D6           (),
+           .ODV          (1'b0),
+           .OCE          (1'b1),
+           .SHIFTIN1     (),
+           .SHIFTIN2     (),
+           .RST          (rst_oserdes_rsync_r[3]),
+           .T1           (1'b0),
+           .T2           (1'b0),
+           .T3           (1'b0),
+           .T4           (1'b0),
+           .TFB          (),
+           .TCE          (1'b1),
+           .WC           (wc_oserdes_r)
+           );
+
+      (* IODELAY_GROUP = IODELAY_GRP *) IODELAYE1 #
+        (
+         .CINVCTRL_SEL          ("FALSE"),
+         .DELAY_SRC             ("O"),
+         .HIGH_PERFORMANCE_MODE ("TRUE"),
+         .IDELAY_TYPE           ("FIXED"), // See CR 511257
+         .IDELAY_VALUE          (0),       // See CR 511257
+         .ODELAY_TYPE           ("VARIABLE"),    
+         .ODELAY_VALUE          (16),  // Set at midpt for CLKDIVINV cal
+         .REFCLK_FREQUENCY      (REFCLK_FREQ),
+         .SIGNAL_PATTERN        ("CLOCK")
+         )
+        u_odelay_rsync
+          (
+           .DATAOUT     (rsync_odelay[3]),
+           .C           (clk),
+           .CE          (dlyce_rsync[3]),
+           .DATAIN      (),
+           .IDATAIN     (),
+           .INC         (dlyinc_rsync[3]),
+           .ODATAIN     (rsync_oserdes[3]),
+           .RST         (dlyrst_rsync_r[3]),
+           .T           (),
+           .CNTVALUEIN  (),
+           .CNTVALUEOUT (dbg_rsync_tap_cnt[19:15]),
+           .CLKIN       (),
+           .CINVCTRL    (1'b0)
+           );
+
+      BUFR #
+        (
+         .BUFR_DIVIDE ("2"),
+         .SIM_DEVICE  ("VIRTEX6")
+         )
+        u_bufr_rsync
+          (
+           .I   (rsync_odelay[3]),
+           .O   (rsync_bufr[3]),
+           .CE  (1'b1),
+           .CLR (rst_rsync[3])
+           );
+    end
+  endgenerate
+
+  assign clk_rsync = rsync_bufr;
 
 endmodule
