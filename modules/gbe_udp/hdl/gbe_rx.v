@@ -517,13 +517,11 @@ module gbe_rx #(
   reg cpu_invalidate;
 
   reg [10:0] cpu_counter;
-  reg [10:0] cpu_counter_z;
 
   reg cpu_ready_reg;
   assign cpu_ready = cpu_ready_reg;
 
   always @(posedge mac_clk) begin
-    cpu_counter_z <= cpu_counter;
 
     if (mac_rst) begin
       cpu_state          <= CPU_IDLE;

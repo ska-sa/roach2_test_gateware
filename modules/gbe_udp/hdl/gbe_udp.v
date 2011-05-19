@@ -103,7 +103,7 @@ module gbe_udp #(
   wire [31:0] cputx_cpu_wr_data;
   wire        cputx_cpu_wr_en;
 
-  wire [11:0] cpu_tx_size; //up to 2k
+  wire [10:0] cpu_tx_size; //up to 2k
   wire        cpu_tx_packet_ready;
   wire        cpu_tx_packet_ack;
 
@@ -111,7 +111,7 @@ module gbe_udp #(
   wire  [8:0] cpurx_cpu_addr;
   wire [31:0] cpurx_cpu_rd_data;
 
-  wire [11:0] cpu_rx_size; //up to 2k
+  wire [10:0] cpu_rx_size; //up to 2k
   wire        cpu_rx_packet_ready;
   wire        cpu_rx_packet_ack;
 

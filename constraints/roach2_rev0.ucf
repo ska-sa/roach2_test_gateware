@@ -281,6 +281,8 @@ NET "ddr3_dq<68>"        LOC = AJ26;
 NET "ddr3_dq<69>"        LOC = AP31;
 NET "ddr3_dq<70>"        LOC = AN31;
 NET "ddr3_dq<71>"        LOC = AP30;
+
+
 NET "ddr3_dqs_n<0>"      LOC = AK25;
 NET "ddr3_dqs_n<1>"      LOC = AM27;
 NET "ddr3_dqs_n<2>"      LOC = AT27;

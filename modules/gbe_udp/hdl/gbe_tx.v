@@ -167,7 +167,7 @@ end endgenerate
         $display("tge_tx: got fabric frame, size = %d", data_count);
 `endif
       end else if (packet_fifo_wr) begin
-        data_count <= data_count + 1;
+        data_count <= data_count + 16'd1;
       end
     end
   end
@@ -184,7 +184,7 @@ end endgenerate
   assign app_afull = packet_fifo_afull || ctrl_fifo_afull;
 
   /* Overflows */
-  reg app_overflow_reg;
+  reg app_overflow_reg = 1'b0;
   assign app_overflow = app_overflow_reg;
 
   always @(posedge app_clk) begin
@@ -311,7 +311,7 @@ end endgenerate
             tx_acked <= 1'b1;
 
           if (mac_tx_ack || tx_acked)
-            progress <= progress + 1;
+            progress <= progress + 6'd1;
 
           if (progress == MAC_HDR_SIZE - 1) begin
             tx_state <= TX_APP_HDR1;
@@ -319,7 +319,7 @@ end endgenerate
           end
         end
         TX_APP_HDR1: begin
-          progress <= progress + 1;
+          progress <= progress + 6'd1;
 
           if (progress == IP_HDR_SIZE - 1) begin
             tx_state <= TX_APP_HDR2;
@@ -327,7 +327,7 @@ end endgenerate
           end
         end
         TX_APP_HDR2: begin
-          progress <= progress + 1;
+          progress <= progress + 6'd1;
 
           if (progress == UDP_HDR_SIZE - 1) begin
             tx_state <= TX_APP_DATA;
@@ -335,7 +335,7 @@ end endgenerate
           end
         end
         TX_APP_DATA: begin
-          tx_count <= tx_count - 1;
+          tx_count <= tx_count - 16'd1;
           if (tx_count == 16'h0) begin
             tx_state <= TX_IDLE;
           end
@@ -346,8 +346,8 @@ end endgenerate
           end
         end
         TX_CPU_DATA: begin
-          tx_count <= tx_count - 1;
-          if (tx_count == 2) begin
+          tx_count <= tx_count - 16'd1;
+          if (tx_count == 16'd2) begin
             tx_state <= TX_IDLE;
           end 
         end
@@ -356,11 +356,10 @@ end endgenerate
     end
   end
 
-  assign cpu_addr_next = tx_state == TX_CPU_DATA || mac_tx_ack ? cpu_addr_reg + 1 : 0;
+  assign cpu_addr_next = tx_state == TX_CPU_DATA || mac_tx_ack ? cpu_addr_reg + 11'd1 : 0;
   assign cpu_addr = cpu_addr_next;
 
   assign ctrl_fifo_rd = (tx_state == TX_APP_DATA) && (tx_count == 16'h1);
-  assign packet_fifo_rd = tx_state == TX_APP_DATA;
 
   /* UDP/IP specific Calculations */
 
@@ -368,8 +367,8 @@ end endgenerate
   reg [15:0] udp_length;
 
   always @(posedge mac_clk) begin
-    ip_length  <= {ctrl_size, 2'b00} + 16'd28;
-    udp_length <= {ctrl_size, 2'b00} + 16'd8;
+    ip_length  <= {ctrl_size} + 16'd28;
+    udp_length <= {ctrl_size} + 16'd8;
   end
 
   /* checksum assignments */

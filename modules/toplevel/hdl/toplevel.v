@@ -11,7 +11,11 @@ module toplevel(
     output         aux_synco_n,
     output         aux_synco_p,
 
+`ifdef REV0
+    inout   [11:0] v6_gpio,
+`else
     inout   [15:0] v6_gpio,
+`endif
 
     input          ppc_perclk,
     input   [5:29] ppc_paddr,
@@ -119,6 +123,7 @@ module toplevel(
   wire clk_200;
 
   wire sys_rst;
+  wire rst_200;
   wire idelay_rdy;
 
   infrastructure infrastructure_inst (
@@ -131,6 +136,15 @@ module toplevel(
     .sys_rst        (sys_rst),
     .idelay_rdy     (idelay_rdy)
   );
+
+  reg rst_200R;
+  reg rst_200RR;
+
+  always @(posedge clk_200) begin
+    rst_200R  <= sys_rst;
+    rst_200RR <= rst_200R;
+  end
+  assign rst_200 = rst_200RR;
 
 
   wire [2:0] knight_rider_speed;
@@ -1265,15 +1279,6 @@ module toplevel(
       err_cnt[7] <= err_cnt[7] + 1;
   end
 
-  assign debug_regin_0 = {xaui_status[(0+1)*8-1:0*8], err_cnt[0]};
-  assign debug_regin_1 = {xaui_status[(1+1)*8-1:1*8], err_cnt[1]};
-  assign debug_regin_2 = {xaui_status[(2+1)*8-1:2*8], err_cnt[2]};
-  assign debug_regin_3 = {xaui_status[(3+1)*8-1:3*8], err_cnt[3]};
-  assign debug_regin_4 = {xaui_status[(4+1)*8-1:4*8], err_cnt[4]};
-  assign debug_regin_5 = {xaui_status[(5+1)*8-1:5*8], err_cnt[5]};
-  assign debug_regin_6 = {xaui_status[(6+1)*8-1:6*8], err_cnt[6]};
-  assign debug_regin_7 = {xaui_status[(7+1)*8-1:7*8], err_cnt[7]};
-
 `ifdef ENABLE_TGE
   genvar I;
 generate for (I=0; I < 8; I=I+1) begin : gen_10ge
@@ -1402,12 +1407,14 @@ end endgenerate
 
   // MAC interface
   wire       mac_rx_clk;
+  wire       mac_rx_rst = sgmii_reset;
   wire [7:0] mac_rx_data;
   wire       mac_rx_dvld;
   wire       mac_rx_goodframe;
   wire       mac_rx_badframe;
   
   wire       mac_tx_clk;
+  wire       mac_tx_rst = sgmii_reset;
   wire [7:0] mac_tx_data;
   wire       mac_tx_dvld;
   wire       mac_tx_ack;
@@ -1457,10 +1464,202 @@ end endgenerate
     .mac_syncacquired   (mac_syncacquired)
   );
 
-  assign mac_tx_data = mac_rx_data;
-  assign mac_tx_dvld = mac_rx_dvld;
+  wire        gbe_app_clk;
+
+  wire  [7:0] gbe_app_tx_data;
+  wire        gbe_app_tx_dvld;
+  wire        gbe_app_tx_eof;
+  wire [31:0] gbe_app_tx_destip;
+  wire [15:0] gbe_app_tx_destport;
+
+  wire        gbe_app_tx_afull;
+  wire        gbe_app_tx_overflow;
+  wire        gbe_app_tx_rst;
+
+  wire  [7:0] gbe_app_rx_data;
+  wire        gbe_app_rx_dvld;
+  wire        gbe_app_rx_eof;
+  wire [31:0] gbe_app_rx_srcip;
+  wire [15:0] gbe_app_rx_srcport;
+  wire        gbe_app_rx_badframe;
+
+  wire        gbe_app_rx_overrun;
+  wire        gbe_app_rx_ack;
+  wire        gbe_app_rx_rst;
+
+  reg [15:0] gbe_idle_errors;
+  always @(posedge clk_125)
+    if (sgmii_rxdisperr)
+      gbe_idle_errors <= gbe_idle_errors + 16'h1;
+
+  gbe_udp #(
+    .LOCAL_ENABLE     (1'b1),
+    .LOCAL_MAC        (48'h1234_5678_9abc),
+    .LOCAL_IP         ({8'd192, 8'd168, 8'd41, 8'd10}),
+    .LOCAL_PORT       (16'd666),
+    .LOCAL_GATEWAY    (8'd1),
+    .CPU_PROMISCUOUS  (1'b1),
+    .PHY_CONFIG       (0),
+    .DIS_CPU_TX       (1'b0),
+    .DIS_CPU_RX       (1'b0),
+    .TX_LARGE_PACKETS (1'b0),
+    .RX_DIST_RAM      (1'b0),
+    .ARP_CACHE_INIT   (0)
+  ) gbe_udp_inst (
+  /**** Application Interface ****/
+    .app_clk         (gbe_app_clk),
+    .app_tx_data     (gbe_app_tx_data),
+    .app_tx_dvld     (gbe_app_tx_dvld),
+    .app_tx_eof      (gbe_app_tx_eof),
+    .app_tx_destip   (gbe_app_tx_destip),
+    .app_tx_destport (gbe_app_tx_destport),
+    .app_tx_afull    (gbe_app_tx_afull),
+    .app_tx_overflow (gbe_app_tx_overflow),
+    .app_tx_rst      (gbe_app_tx_rst),
+    .app_rx_data     (gbe_app_rx_data),
+    .app_rx_dvld     (gbe_app_rx_dvld),
+    .app_rx_eof      (gbe_app_rx_eof),
+    .app_rx_srcip    (gbe_app_rx_srcip),
+    .app_rx_srcport  (gbe_app_rx_srcport),
+    .app_rx_badframe (gbe_app_rx_badframe),
+    .app_rx_overrun  (gbe_app_rx_overrun),
+    .app_rx_ack      (gbe_app_rx_ack),
+    .app_rx_rst      (gbe_app_rx_rst),
+
+  /**** MAC Interface ****/
+    .mac_tx_clk       (mac_tx_clk),
+    .mac_tx_rst       (mac_tx_rst),
+    .mac_tx_data      (mac_tx_data),
+    .mac_tx_dvld      (mac_tx_dvld),
+    .mac_tx_ack       (mac_tx_ack),
+    .mac_rx_clk       (mac_rx_clk),
+    .mac_rx_rst       (mac_rx_rst),
+    .mac_rx_data      (mac_rx_data),
+    .mac_rx_dvld      (mac_rx_dvld),
+    .mac_rx_goodframe (mac_rx_goodframe),
+    .mac_rx_badframe  (mac_rx_badframe),
+
+  /**** PHY Status/Control ****/
+    .phy_status       ({gbe_idle_errors, 15'b0, mac_syncacquired}),
+    .phy_control      (),
+
+  /**** CPU Bus Attachment ****/
+    .wb_clk_i    (wb_clk_i),
+    .wb_rst_i    (wb_rst_i),
+    .wb_cyc_i    (wbs_cyc_o[GBE_SLI]),
+    .wb_stb_i    (wbs_stb_o[GBE_SLI]),
+    .wb_we_i     (wbs_we_o),
+    .wb_sel_i    (wbs_sel_o),
+    .wb_adr_i    (wbs_adr_o),
+    .wb_dat_i    (wbs_dat_o),
+    .wb_dat_o    (wbs_dat_i[(GBE_SLI+1)*32-1:(GBE_SLI)*32]),
+    .wb_ack_o    (wbs_ack_i[GBE_SLI]),
+    .wb_err_o    (wbs_err_i[GBE_SLI])
+  );
+
+  assign gbe_app_clk          = clk_200;
+  assign gbe_app_tx_data      = gbe_app_rx_data;
+  assign gbe_app_tx_dvld      = gbe_app_rx_dvld;
+  assign gbe_app_tx_eof       = gbe_app_rx_eof;
+  assign gbe_app_tx_destip    = {8'd192,8'd168,8'd41,8'd1};
+  assign gbe_app_tx_destport  = 16'd6666;
+  assign gbe_app_tx_rst       = 1'b0;
+  assign gbe_app_rx_ack       = 1'b1;
+  assign gbe_app_rx_rst       = 1'b0;
+
+  /*
+
+  reg [31:0] data_ticker = 32'b0;
+  reg  [7:0] gbe_progress = 8'b0;
+  reg  [3:0] gbe_ticker = 4'b0;
+
+  reg gbe_phy_rdyR;
+  reg gbe_phy_rdyRR;
+  wire gbe_phy_rdy = gbe_phy_rdyRR;
+
+  always @(posedge clk_200) begin
+    gbe_phy_rdyR  <= mac_syncacquired;
+    gbe_phy_rdyRR <= gbe_phy_rdyR;
+
+    if (rst_200 || !gbe_phy_rdy) begin
+      data_ticker <= 32'b0;
+      gbe_progress <= 8'b0;
+      gbe_ticker <= 4'b0;
+    end else begin
+      if (gbe_ticker == 4'b1111) begin
+        gbe_progress <= gbe_progress + 1;
+        gbe_ticker   <= gbe_ticker + 1;
+
+        if (gbe_progress[1:0] == 2'b11)
+          data_ticker  <= data_ticker + 1;
+      end else begin
+        if (!gbe_app_tx_afull)
+          gbe_ticker <= gbe_ticker + 1;
+      end
+    end
+  end
+
+  assign gbe_app_clk          = clk_200;
+
+  assign gbe_app_tx_data      = gbe_progress[1:0] == 2'b00 ? data_ticker[31:24] :
+                                gbe_progress[1:0] == 2'b01 ? data_ticker[23:16] :
+                                gbe_progress[1:0] == 2'b10 ? data_ticker[15:8] :
+                                                             data_ticker[7:0];
+
+  assign gbe_app_tx_dvld      = gbe_ticker == 4'b1111;
+  assign gbe_app_tx_eof       = gbe_progress == 8'hff;
+  assign gbe_app_tx_destip    = {8'd192,8'd168,8'd41,8'd1};
+  assign gbe_app_tx_destport  = 16'd667;
+  assign gbe_app_tx_rst       = 1'b0;
+  assign gbe_app_rx_ack       = 1'b1;
+  assign gbe_app_rx_rst       = 1'b0;
+
+  reg [15:0] gbe_rx_dvld_counter;
+  reg [15:0] gbe_rx_eof_counter;
+
+  always @(posedge clk_200) begin
+    if (gbe_app_rx_eof && gbe_app_rx_dvld) begin
+      gbe_rx_eof_counter <= gbe_rx_eof_counter + 1;
+    end
+    if (gbe_app_rx_dvld) begin
+      gbe_rx_dvld_counter <= gbe_rx_dvld_counter + 1;
+    end
+  end
+
+  reg [15:0] gbe_app_rx_badframe_counter;
+  reg [15:0] gbe_app_rx_overrun_counter;
+
+  always @(posedge clk_200) begin
+    if (gbe_app_rx_eof && gbe_app_rx_dvld) begin
+      if (gbe_app_rx_badframe)
+        gbe_app_rx_badframe_counter <= gbe_app_rx_badframe_counter + 1;
+      if (gbe_app_rx_overrun)
+        gbe_app_rx_overrun_counter <= gbe_app_rx_overrun_counter + 1;
+    end
+  end
+
+  reg [15:0] foo0;
+  reg [15:0] foo1;
+
+  always @(posedge clk_200) begin
+    if (gbe_app_tx_dvld)
+      foo0 <= foo0 + 1;
+    if (gbe_app_tx_dvld && gbe_app_tx_eof)
+      foo1 <= foo1 + 1;
+  end
+  */
+
 
 `else
 `endif
+
+  assign debug_regin_0 = 32'hdead_0000;
+  assign debug_regin_1 = 32'hdead_0001;
+  assign debug_regin_2 = 32'hdead_0002;
+  assign debug_regin_3 = 32'hdead_0003;
+  assign debug_regin_4 = 32'hdead_0004;
+  assign debug_regin_5 = 32'hdead_0005;
+  assign debug_regin_6 = 32'hdead_0006;
+  assign debug_regin_7 = 32'hdead_0007;
 
 endmodule
