@@ -55,11 +55,21 @@ module gbe_cpu_attach #(
 
   /************* Generic Bus Assignments *************/
 
+  wire        cpu_clk = wb_clk_i;
+  wire        cpu_rst = wb_rst_i;
+
   wire  [3:0] cpu_sel   = wb_sel_i;
   wire        cpu_rnw   = !wb_we_i;
   wire        cpu_trans = !wb_ack_o && wb_stb_i && wb_cyc_i; 
   wire [13:0] cpu_addr  = wb_adr_i[13:0];
   wire [31:0] cpu_din   = wb_dat_i;
+
+  wire        cpu_ack;
+  wire        cpu_err;
+  wire [31:0] cpu_dout;
+  assign wb_ack_o = cpu_ack;
+  assign wb_err_o = cpu_err;
+  assign wb_dat_o = cpu_dout;
 
   /************* CPU Address Decoding *************/
 
@@ -124,10 +134,11 @@ module gbe_cpu_attach #(
   assign cpu_rx_ack   = cpu_rx_ack_reg;
 
   reg cpu_wait;
-  reg cpu_ack;
-  always @(posedge wb_clk_i) begin
+  reg cpu_ack_reg;
+
+  always @(posedge cpu_clk) begin
     //strobes
-    cpu_ack          <= 1'b0;
+    cpu_ack_reg      <= 1'b0;
     use_arp_data     <= 1'b0;
     use_tx_data      <= 1'b0;
     use_rx_data      <= 1'b0;
@@ -149,7 +160,7 @@ module gbe_cpu_attach #(
       cpu_rx_ack_reg  <= 1'b0;
     end
 
-    if (wb_rst_i) begin
+    if (cpu_rst) begin
       cpu_rx_size_reg   <= 13'b0;
       cpu_tx_ready_reg  <= 1'b0;
 
@@ -173,16 +184,16 @@ module gbe_cpu_attach #(
 
     end else if (cpu_wait) begin
       cpu_wait <= 1'b0;
-      cpu_ack  <= 1'b1;
+      cpu_ack_reg  <= 1'b1;
     end else begin
 
       if (cpu_trans)
-        cpu_ack <= 1'b1;
+        cpu_ack_reg <= 1'b1;
 
       // ARP Cache
       if (arp_sel && cpu_trans) begin 
         if (!cpu_rnw) begin
-          cpu_ack  <= 1'b0;
+          cpu_ack_reg  <= 1'b0;
           cpu_wait <= 1'b1;
         end else begin
           use_arp_data <= 1'b1;
@@ -200,7 +211,7 @@ module gbe_cpu_attach #(
       // TX Buffer 
       if (txbuf_sel && cpu_trans) begin
         if (!cpu_rnw) begin
-          cpu_ack  <= 1'b0;
+          cpu_ack_reg  <= 1'b0;
           cpu_wait <= 1'b1;
         end else begin
           use_tx_data <= 1'b1;
@@ -290,12 +301,12 @@ module gbe_cpu_attach #(
 
   reg [47:0] write_data; //write data for all three buffers
 
-  always @(posedge wb_clk_i) begin
+  always @(posedge cpu_clk) begin
     //strobes
     arp_cache_we <= 1'b0;
     tx_buffer_we <= 1'b0;
 
-    if (wb_rst_i) begin
+    if (cpu_rst) begin
     end else begin
       //populate write_data according to wishbone transaction info & contents
       //of memory
@@ -345,12 +356,12 @@ module gbe_cpu_attach #(
                              cpu_data_src == REG_PHY_STATUS    ? phy_status :
                              cpu_data_src == REG_PHY_CONTROL   ? phy_control :
                                                                  32'b0;
-  assign wb_dat_o = use_arp_data ? arp_data_int :
+  assign cpu_dout = use_arp_data ? arp_data_int :
                     use_tx_data  ? tx_data_int  :
                     use_rx_data  ? rx_data_int  :
                                    cpu_data_int;
 
-  assign wb_err_o   = 1'b0;
-  assign wb_ack_o   = cpu_ack;
+  assign cpu_err   = 1'b0;
+  assign cpu_ack   = cpu_ack_reg;
 
 endmodule
