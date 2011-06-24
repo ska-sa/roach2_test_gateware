@@ -1,5 +1,7 @@
+`include "build_parameters.v"
 `include "parameters.v"
 `include "mem_layout.v"
+
 module toplevel(
     input          sys_clk_n,
     input          sys_clk_p,
@@ -386,7 +388,12 @@ module toplevel(
   wire [31:0] debug_regout_6;
   wire [31:0] debug_regout_7;
 
-  sys_block sys_block_inst(
+  sys_block #(
+    .BOARD_ID (`BOARD_ID),
+    .REV_MAJ  (`REV_MAJOR),
+    .REV_MIN  (`REV_MINOR),
+    .REV_RCS  (`RCS_UPTODATE ? `REV_RCS : 32'b0)
+  ) sys_block_inst (
     .wb_clk_i (wb_clk_i),
     .wb_rst_i (wb_rst_i),
     .wb_cyc_i (wbs_cyc_o[SYSBLOCK_SLI]),
@@ -418,7 +425,7 @@ module toplevel(
     .regout_7  (debug_regout_7)
   );
 
-  assign debug_clk     = sys_clk;
+  assign debug_clk = sys_clk;
 
   /************************ ZDOK 0 ****************************/
 

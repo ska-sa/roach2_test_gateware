@@ -42,12 +42,11 @@ synth: build_parameters
 	   GEN_DIR=../$(NETLIST_DIR)
 
 build_parameters:
-	echo "build_parameters not implemented"
-	#@make -C support build_parameters \
+	@make -C support build_parameters \
 	   PROJECT=$(PROJECT) REV_MAJOR=$(REV_MAJOR) REV_MINOR=$(REV_MINOR) \
-	   REV_RCS=$(REV_RCS) RCS_UPTODATE=$(RCS_UPTODATE) \
+	   REV_RCS=$(REV_RCS) RCS_UPTODATE=$(RCS_UPTODATE) BOARD_ID=$(BOARD_ID)\
 	   MAKEDEFS=../Makefile.defs INCDIR=../$(VINC)\
-	   BOARD_ID=$(BOARD_ID) C_HEADER=../$(GEN_DIR)/$(PROJECT)_$(REV_MAJOR).h
+	   BOARD_ID=$(BOARD_ID)
 
 clean:
 	#make -C modules clean
