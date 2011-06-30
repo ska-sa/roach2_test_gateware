@@ -49,14 +49,14 @@
 // supported by Xilinx, Mentor Graphics and Synplicity synthesis
 // tools. Ensure they are correct for your synthesis tool(s).
 
-// You must compile the wrapper file tx_packet_fifo.v when simulating
-// the core, tx_packet_fifo. When compiling the wrapper file, be sure to
+// You must compile the wrapper file gbe_tx_packet_fifo.v when simulating
+// the core, gbe_tx_packet_fifo. When compiling the wrapper file, be sure to
 // reference the XilinxCoreLib Verilog simulation library. For detailed
 // instructions, please refer to the "CORE Generator Help".
 
 `timescale 1ns/1ps
 
-module tx_packet_fifo(
+module gbe_tx_packet_fifo(
 	rst,
 	wr_clk,
 	rd_clk,
@@ -211,14 +211,14 @@ output prog_full;
 		.C_PROG_EMPTY_TYPE_WACH(5),
 		.C_PROG_EMPTY_TYPE_WDCH(5),
 		.C_PROG_EMPTY_TYPE_WRCH(5),
-		.C_PROG_FULL_THRESH_ASSERT_VAL(8186),
+		.C_PROG_FULL_THRESH_ASSERT_VAL(8185),
 		.C_PROG_FULL_THRESH_ASSERT_VAL_AXIS(1023),
 		.C_PROG_FULL_THRESH_ASSERT_VAL_RACH(1023),
 		.C_PROG_FULL_THRESH_ASSERT_VAL_RDCH(1023),
 		.C_PROG_FULL_THRESH_ASSERT_VAL_WACH(1023),
 		.C_PROG_FULL_THRESH_ASSERT_VAL_WDCH(1023),
 		.C_PROG_FULL_THRESH_ASSERT_VAL_WRCH(1023),
-		.C_PROG_FULL_THRESH_NEGATE_VAL(8185),
+		.C_PROG_FULL_THRESH_NEGATE_VAL(8184),
 		.C_PROG_FULL_TYPE(1),
 		.C_PROG_FULL_TYPE_AXIS(5),
 		.C_PROG_FULL_TYPE_RACH(5),

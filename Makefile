@@ -25,21 +25,21 @@ bits: synth
 	   PROJECT=$(PROJECT) \
 	   PARTNUM=$(PARTNUM) \
 	   GEN_DIR=../$(GEN_DIR) \
-	   NETLIST="../$(NETLIST_DIR)/$(PROJECT).ngc" \
+	   NETLIST="../$(NETLIST)/$(PROJECT).ngc" \
 	   NETLIST_DIRS="$(addprefix  ../,$(NETLIST_DIRS))"
 	@cp par/$(PROJECT).bit gen/$(PROJECT)_$(REV_MAJOR)_$(REV_MINOR)_$(REV_RCS).bit
 	@cp par/$(PROJECT).bin gen/$(PROJECT)_$(REV_MAJOR)_$(REV_MINOR)_$(REV_RCS).bin
 
 synth: build_parameters
 	@make -C synthesis netlist \
-	   NETLIST="../$(NETLIST_DIR)/$(PROJECT).ngc" \
+	   NETLIST="../$(NETLIST)/$(PROJECT).ngc" \
 	   PROJ_FILE="../Makefile.defs" \
 	   SRC="$(addprefix ../,$(SRC))" \
 	   PROJECT=$(PROJECT) \
 	   TOPLEVEL_MODULE=$(TOPLEVEL_MODULE) \
 	   PARTNUM=$(PARTNUM) \
 	   VINC="$(addprefix ../,$(VINC))" \
-	   GEN_DIR=../$(NETLIST_DIR)
+	   GEN_DIR=../$(NETLIST)
 
 build_parameters:
 	@make -C support build_parameters \

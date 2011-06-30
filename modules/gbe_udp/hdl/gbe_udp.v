@@ -344,7 +344,7 @@ module gbe_udp #(
      we could quite comfortably use a 24 bit memory and time
      multiplex to make up 48 bits. */
 
-  arp_cache arp_cache_inst (
+  gbe_arp_cache arp_cache_inst (
     .clka  (wb_clk_i),
     .addra (arp_cpu_cache_index),
     .douta (arp_cpu_cache_rd_data),
@@ -367,7 +367,7 @@ generate if (DIS_CPU_TX) begin : disable_cpu_tx
 
 end else begin : enable_cpu_tx
 
-  cpu_buffer cpu_buffer_tx(
+  gbe_cpu_buffer cpu_buffer_tx(
     .clka  (wb_clk_i),
     .addra ({!cpu_tx_buffer_sel, cputx_cpu_addr}),
     .douta ({cputx_cpu_rd_data[ 7:0 ], cputx_cpu_rd_data[15:8],
@@ -392,7 +392,7 @@ generate if (DIS_CPU_RX) begin : disable_cpu_rx
 
 end else begin : enable_cpu_rx
 
-  cpu_buffer cpu_buffer_rx(
+  gbe_cpu_buffer cpu_buffer_rx(
     .clka  (wb_clk_i),
     .addra ({!cpu_rx_buffer_sel, cpurx_cpu_addr}),
     .douta ({cpurx_cpu_rd_data[ 7:0 ], cpurx_cpu_rd_data[15:8],

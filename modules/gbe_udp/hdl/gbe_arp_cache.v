@@ -49,14 +49,14 @@
 // supported by Xilinx, Mentor Graphics and Synplicity synthesis
 // tools. Ensure they are correct for your synthesis tool(s).
 
-// You must compile the wrapper file arp_cache.v when simulating
-// the core, arp_cache. When compiling the wrapper file, be sure to
+// You must compile the wrapper file gbe_arp_cache.v when simulating
+// the core, gbe_arp_cache. When compiling the wrapper file, be sure to
 // reference the XilinxCoreLib Verilog simulation library. For detailed
 // instructions, please refer to the "CORE Generator Help".
 
 `timescale 1ns/1ps
 
-module arp_cache(
+module gbe_arp_cache(
 	clka,
 	wea,
 	addra,
@@ -107,7 +107,7 @@ output [47 : 0] doutb;
 		.C_HAS_SOFTECC_OUTPUT_REGS_B(0),
 		.C_INITA_VAL("0"),
 		.C_INITB_VAL("0"),
-		.C_INIT_FILE_NAME("simhdl/arp_cache.mif"),
+		.C_INIT_FILE_NAME("simhdl/gbe_arp_cache.mif"),
 		.C_LOAD_INIT_FILE(1),
 		.C_MEM_TYPE(2),
 		.C_MUX_PIPELINE_STAGES(0),
@@ -147,14 +147,14 @@ output [47 : 0] doutb;
 		.ADDRB(addrb),
 		.DINB(dinb),
 		.DOUTB(doutb),
-		.RSTA(0),
-		.ENA(0),
-		.REGCEA(0),
-		.RSTB(0),
-		.ENB(0),
-		.REGCEB(0),
-		.INJECTSBITERR(0),
-		.INJECTDBITERR(0),
+		.RSTA(),
+		.ENA(),
+		.REGCEA(),
+		.RSTB(),
+		.ENB(),
+		.REGCEB(),
+		.INJECTSBITERR(),
+		.INJECTDBITERR(),
 		.SBITERR(),
 		.DBITERR(),
 		.RDADDRECC());

@@ -57,7 +57,7 @@ module gbe_tx #(
   wire        packet_fifo_rd;
   wire        packet_fifo_empty;
 
-  tx_packet_fifo tx_packet_fifo_inst(
+  gbe_tx_packet_fifo tx_packet_fifo_inst(
     .wr_clk    (app_clk),
     .din       (packet_fifo_din),
     .wr_en     (packet_fifo_wr),
@@ -90,7 +90,7 @@ module gbe_tx #(
   wire        ctrl_fifo_empty;
 
 
-  ctrl_fifo tx_packet_ctrl_fifo_inst(
+  gbe_ctrl_fifo tx_packet_ctrl_fifo_inst(
     .wr_clk    (app_clk),
     .din       (ctrl_fifo_din),
     .wr_en     (ctrl_fifo_wr),

@@ -1165,47 +1165,45 @@ module toplevel(
 
   wire  [8*8-1:0] xaui_status;
 
-
-
-  assign mgt_txpostemphasis [5*(0+1)-1:0*5] = debug_regout_0[31] ? debug_regout_0[ 4:0 ] : 5'b0000;
-  assign mgt_txpreemphasis  [4*(0+1)-1:0*4] = debug_regout_0[31] ? debug_regout_0[11:8 ] : 4'b0100;
-  assign mgt_txdiffctrl     [4*(0+1)-1:0*4] = debug_regout_0[31] ? debug_regout_0[19:16] : 4'b1010;
-  assign mgt_rxeqmix        [3*(0+1)-1:0*3] = debug_regout_0[31] ? debug_regout_0[22:20] : 3'b111;
+  assign mgt_txpostemphasis [5*(0+1)-1:0*5] = 5'b0000;
+  assign mgt_txpreemphasis  [4*(0+1)-1:0*4] = 4'b0100;
+  assign mgt_txdiffctrl     [4*(0+1)-1:0*4] = 4'b1010;
+  assign mgt_rxeqmix        [3*(0+1)-1:0*3] = 3'b111;
                                  
-  assign mgt_txpostemphasis [5*(1+1)-1:1*5] = debug_regout_0[31] ? debug_regout_0[ 4:0 ] : 5'b00000;
-  assign mgt_txpreemphasis  [4*(1+1)-1:1*4] = debug_regout_0[31] ? debug_regout_0[11:8 ] : 4'b0100;
-  assign mgt_txdiffctrl     [4*(1+1)-1:1*4] = debug_regout_0[31] ? debug_regout_0[19:16] : 4'b1010;
-  assign mgt_rxeqmix        [3*(1+1)-1:1*3] = debug_regout_0[31] ? debug_regout_0[22:20] : 3'b111;
+  assign mgt_txpostemphasis [5*(1+1)-1:1*5] = 5'b00000;
+  assign mgt_txpreemphasis  [4*(1+1)-1:1*4] = 4'b0100;
+  assign mgt_txdiffctrl     [4*(1+1)-1:1*4] = 4'b1010;
+  assign mgt_rxeqmix        [3*(1+1)-1:1*3] = 3'b111;
                                  
-  assign mgt_txpostemphasis [5*(2+1)-1:2*5] = debug_regout_0[31] ? debug_regout_0[ 4:0 ] : 5'b00000;
-  assign mgt_txpreemphasis  [4*(2+1)-1:2*4] = debug_regout_0[31] ? debug_regout_0[11:8 ] : 4'b0100;
-  assign mgt_txdiffctrl     [4*(2+1)-1:2*4] = debug_regout_0[31] ? debug_regout_0[19:16] : 4'b1010;
-  assign mgt_rxeqmix        [3*(2+1)-1:2*3] = debug_regout_0[31] ? debug_regout_0[22:20] : 3'b111;
+  assign mgt_txpostemphasis [5*(2+1)-1:2*5] = 5'b00000;
+  assign mgt_txpreemphasis  [4*(2+1)-1:2*4] = 4'b0100;
+  assign mgt_txdiffctrl     [4*(2+1)-1:2*4] = 4'b1010;
+  assign mgt_rxeqmix        [3*(2+1)-1:2*3] = 3'b111;
                                  
-  assign mgt_txpostemphasis [5*(3+1)-1:3*5] = debug_regout_0[31] ? debug_regout_0[ 4:0 ] : 5'b00000;
-  assign mgt_txpreemphasis  [4*(3+1)-1:3*4] = debug_regout_0[31] ? debug_regout_0[11:8 ] : 4'b0100;
-  assign mgt_txdiffctrl     [4*(3+1)-1:3*4] = debug_regout_0[31] ? debug_regout_0[19:16] : 4'b1010;
-  assign mgt_rxeqmix        [3*(3+1)-1:3*3] = debug_regout_0[31] ? debug_regout_0[22:20] : 3'b111;
+  assign mgt_txpostemphasis [5*(3+1)-1:3*5] = 5'b00000;
+  assign mgt_txpreemphasis  [4*(3+1)-1:3*4] = 4'b0100;
+  assign mgt_txdiffctrl     [4*(3+1)-1:3*4] = 4'b1010;
+  assign mgt_rxeqmix        [3*(3+1)-1:3*3] = 3'b111;
                                  
-  assign mgt_txpostemphasis [5*(4+1)-1:4*5] = debug_regout_0[31] ? debug_regout_0[ 4:0 ] : 5'b00000;
-  assign mgt_txpreemphasis  [4*(4+1)-1:4*4] = debug_regout_0[31] ? debug_regout_0[11:8 ] : 4'b0100;
-  assign mgt_txdiffctrl     [4*(4+1)-1:4*4] = debug_regout_0[31] ? debug_regout_0[19:16] : 4'b1010;
-  assign mgt_rxeqmix        [3*(4+1)-1:4*3] = debug_regout_0[31] ? debug_regout_0[22:20] : 3'b111;
+  assign mgt_txpostemphasis [5*(4+1)-1:4*5] = 5'b00000;
+  assign mgt_txpreemphasis  [4*(4+1)-1:4*4] = 4'b0100;
+  assign mgt_txdiffctrl     [4*(4+1)-1:4*4] = 4'b1010;
+  assign mgt_rxeqmix        [3*(4+1)-1:4*3] = 3'b111;
                                  
-  assign mgt_txpostemphasis [5*(5+1)-1:5*5] = debug_regout_0[31] ? debug_regout_0[ 4:0 ] : 5'b00000;
-  assign mgt_txpreemphasis  [4*(5+1)-1:5*4] = debug_regout_0[31] ? debug_regout_0[11:8 ] : 4'b0100;
-  assign mgt_txdiffctrl     [4*(5+1)-1:5*4] = debug_regout_0[31] ? debug_regout_0[19:16] : 4'b1010;
-  assign mgt_rxeqmix        [3*(5+1)-1:5*3] = debug_regout_0[31] ? debug_regout_0[22:20] : 3'b111;
+  assign mgt_txpostemphasis [5*(5+1)-1:5*5] = 5'b00000;
+  assign mgt_txpreemphasis  [4*(5+1)-1:5*4] = 4'b0100;
+  assign mgt_txdiffctrl     [4*(5+1)-1:5*4] = 4'b1010;
+  assign mgt_rxeqmix        [3*(5+1)-1:5*3] = 3'b111;
                                  
-  assign mgt_txpostemphasis [5*(6+1)-1:6*5] = debug_regout_0[31] ? debug_regout_0[ 4:0 ] : 5'b00000;
-  assign mgt_txpreemphasis  [4*(6+1)-1:6*4] = debug_regout_0[31] ? debug_regout_0[11:8 ] : 4'b0100;
-  assign mgt_txdiffctrl     [4*(6+1)-1:6*4] = debug_regout_0[31] ? debug_regout_0[19:16] : 4'b1010;
-  assign mgt_rxeqmix        [3*(6+1)-1:6*3] = debug_regout_0[31] ? debug_regout_0[22:20] : 3'b111;
+  assign mgt_txpostemphasis [5*(6+1)-1:6*5] = 5'b00000;
+  assign mgt_txpreemphasis  [4*(6+1)-1:6*4] = 4'b0100;
+  assign mgt_txdiffctrl     [4*(6+1)-1:6*4] = 4'b1010;
+  assign mgt_rxeqmix        [3*(6+1)-1:6*3] = 3'b111;
                                  
-  assign mgt_txpostemphasis [5*(7+1)-1:7*5] = debug_regout_0[31] ? debug_regout_0[ 4:0 ] : 5'b00000;
-  assign mgt_txpreemphasis  [4*(7+1)-1:7*4] = debug_regout_0[31] ? debug_regout_0[11:8 ] : 4'b0100;
-  assign mgt_txdiffctrl     [4*(7+1)-1:7*4] = debug_regout_0[31] ? debug_regout_0[19:16] : 4'b1010;
-  assign mgt_rxeqmix        [3*(7+1)-1:7*3] = debug_regout_0[31] ? debug_regout_0[22:20] : 3'b111;
+  assign mgt_txpostemphasis [5*(7+1)-1:7*5] = 5'b00000;
+  assign mgt_txpreemphasis  [4*(7+1)-1:7*4] = 4'b0100;
+  assign mgt_txdiffctrl     [4*(7+1)-1:7*4] = 4'b1010;
+  assign mgt_rxeqmix        [3*(7+1)-1:7*3] = 3'b111;
 
 `ifdef ENABLE_TGE
   parameter TGE_ENABLE_MASK = 8'b1111_1111;
@@ -1259,34 +1257,46 @@ module toplevel(
 
   wire [7:0] xaui_loopback = 8'b0000_0000;
 
-  reg [23:0] err_cnt [7:0];
-  reg [31:0] k_cnt;
-  reg [31:0] nk_cnt;
-  reg [31:0] buf_cnt;
-  reg [31:0] A_cnt;
-  reg [31:0] K_cnt;
-  reg [31:0] R_cnt;
+  reg [15:0] xaui_err_cnt [7:0];
 
   always @(posedge xaui_clk) begin
     if (mgt_rxcodevalid[(0 + 1)*8-1:0*8] != 8'b1111_1111)
-      err_cnt[0] <= err_cnt[0] + 1;
+      xaui_err_cnt[0] <= xaui_err_cnt[0] + 16'b1;
     if (mgt_rxcodevalid[(1 + 1)*8-1:1*8] != 8'b1111_1111)
-      err_cnt[1] <= err_cnt[1] + 1;
+      xaui_err_cnt[1] <= xaui_err_cnt[1] + 16'b1;
     if (mgt_rxcodevalid[(2 + 1)*8-1:2*8] != 8'b1111_1111)
-      err_cnt[2] <= err_cnt[2] + 1;
+      xaui_err_cnt[2] <= xaui_err_cnt[2] + 16'b1;
     if (mgt_rxcodevalid[(3 + 1)*8-1:3*8] != 8'b1111_1111)
-      err_cnt[3] <= err_cnt[3] + 1;
+      xaui_err_cnt[3] <= xaui_err_cnt[3] + 16'b1;
     if (mgt_rxcodevalid[(4 + 1)*8-1:4*8] != 8'b1111_1111)
-      err_cnt[4] <= err_cnt[4] + 1;
+      xaui_err_cnt[4] <= xaui_err_cnt[4] + 16'b1;
     if (mgt_rxcodevalid[(5 + 1)*8-1:5*8] != 8'b1111_1111)
-      err_cnt[5] <= err_cnt[5] + 1;
+      xaui_err_cnt[5] <= xaui_err_cnt[5] + 16'b1;
     if (mgt_rxcodevalid[(6 + 1)*8-1:6*8] != 8'b1111_1111)
-      err_cnt[6] <= err_cnt[6] + 1;
+      xaui_err_cnt[6] <= xaui_err_cnt[6] + 16'b1;
     if (mgt_rxcodevalid[(7 + 1)*8-1:7*8] != 8'b1111_1111)
-      err_cnt[7] <= err_cnt[7] + 1;
+      xaui_err_cnt[7] <= xaui_err_cnt[7] + 16'b1;
   end
 
 `ifdef ENABLE_TGE
+  wire        tge_tx_valid         [7:0];
+  wire        tge_tx_end_of_frame  [7:0];
+  wire [63:0] tge_tx_data          [7:0];
+  wire [31:0] tge_tx_dest_ip       [7:0];
+  wire [15:0] tge_tx_dest_port     [7:0];
+  wire        tge_tx_overflow      [7:0];
+  wire        tge_tx_afull         [7:0];
+
+  wire        tge_rx_valid         [7:0];
+  wire        tge_rx_end_of_frame  [7:0];
+  wire [63:0] tge_rx_data          [7:0];
+  wire [31:0] tge_rx_source_ip     [7:0];
+  wire [15:0] tge_rx_source_port   [7:0];
+  wire        tge_rx_bad_frame     [7:0];
+  wire        tge_rx_overrun       [7:0];
+  wire        tge_rx_overrun_ack   [7:0];
+  wire        tge_rx_ack           [7:0];
+
   genvar I;
 generate for (I=0; I < 8; I=I+1) begin : gen_10ge
 
@@ -1319,11 +1329,68 @@ generate for (I=0; I < 8; I=I+1) begin : gen_10ge
     .loopback_en      (xaui_loopback[I])
   );
 
-  assign xgmii_txd[I*64+:64] = {8{8'h07}};
-  assign xgmii_txc[I*8+:8]   = {8{1'b1}};
+  kat_ten_gb_eth kat_ten_gb_eth_inst (
+    .clk (clk_200),
+    .rst (rst_200),
 
-  //assign xgmii_txd[I*64+:64] = xgmii_rxd[I*64+:64];
-  //assign xgmii_txc[I*8+:8]   = xgmii_rxc[I*8+:8];
+    .tx_valid        (tge_tx_valid[I]),
+    .tx_end_of_frame (tge_tx_end_of_frame[I]),
+    .tx_data         (tge_tx_data[I]),
+    .tx_dest_ip      (tge_tx_dest_ip[I]),
+    .tx_dest_port    (tge_tx_dest_port[I]),
+    .tx_overflow     (tge_tx_overflow[I]), 
+    .tx_afull        (tge_tx_afull[I]), 
+
+    .rx_valid        (tge_rx_valid[I]),
+    .rx_end_of_frame (tge_rx_end_of_frame[I]),
+    .rx_data         (tge_rx_data[I]),
+    .rx_source_ip    (tge_rx_source_ip[I]),
+    .rx_source_port  (tge_rx_source_port[I]),
+    .rx_bad_frame    (tge_rx_bad_frame[I]),
+    .rx_overrun      (tge_rx_overrun[I]),
+    .rx_overrun_ack  (tge_rx_overrun_ack[I]),
+    .rx_ack          (tge_rx_ack[I]),
+
+    .wb_clk_i    (wb_clk_i),
+    .wb_rst_i    (wb_rst_i),
+    .wb_cyc_i    (wbs_cyc_o[TGE0_SLI + I]),
+    .wb_stb_i    (wbs_stb_o[TGE0_SLI + I]),
+    .wb_we_i     (wbs_we_o),
+    .wb_sel_i    (wbs_sel_o),
+    .wb_adr_i    (wbs_adr_o),
+    .wb_dat_i    (wbs_dat_o),
+    .wb_dat_o    (wbs_dat_i[(TGE0_SLI + I)*32+:32]),
+    .wb_ack_o    (wbs_ack_i[TGE0_SLI + I]),
+    .wb_err_o    (wbs_err_i[TGE0_SLI + I]),
+
+    .led_up (),
+    .led_rx (),
+    .led_tx (),
+
+    .xaui_clk   (xaui_clk),
+    .xaui_reset (xaui_reset),
+    .phy_status ({xaui_err_cnt[I], 8'b0, xaui_status[I*8+:8]}),
+
+    .xgmii_txd   (xgmii_txd[I*64+:64]),
+    .xgmii_txc   (xgmii_txc[I*8+:8]),
+    .xgmii_rxd   (xgmii_rxd[I*64+:64]),
+    .xgmii_rxc   (xgmii_rxc[I*8+:8]),
+
+    .mgt_rxeqmix       (),
+    .mgt_rxeqpole      (),
+    .mgt_txpreemphasis (),
+    .mgt_txdiffctrl    ()
+
+  );
+
+  assign tge_tx_valid[I]         = 1'b0;
+  assign tge_tx_end_of_frame[I]  = 1'b0;
+  assign tge_tx_data[I]          = 64'b0;
+  assign tge_tx_dest_ip[I]       = 32'b0;
+  assign tge_tx_dest_port[I]     = 16'b0;
+
+  assign tge_rx_overrun_ack[I]   = 1'b0;
+  assign tge_rx_ack[I]           = 1'b1;
 
 end endgenerate
 `endif

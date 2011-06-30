@@ -49,14 +49,14 @@
 // supported by Xilinx, Mentor Graphics and Synplicity synthesis
 // tools. Ensure they are correct for your synthesis tool(s).
 
-// You must compile the wrapper file cpu_buffer.v when simulating
-// the core, cpu_buffer. When compiling the wrapper file, be sure to
+// You must compile the wrapper file gbe_cpu_buffer.v when simulating
+// the core, gbe_cpu_buffer. When compiling the wrapper file, be sure to
 // reference the XilinxCoreLib Verilog simulation library. For detailed
 // instructions, please refer to the "CORE Generator Help".
 
 `timescale 1ns/1ps
 
-module cpu_buffer(
+module gbe_cpu_buffer(
 	clka,
 	wea,
 	addra,
@@ -147,14 +147,14 @@ output [7 : 0] doutb;
 		.ADDRB(addrb),
 		.DINB(dinb),
 		.DOUTB(doutb),
-		.RSTA(0),
-		.ENA(0),
-		.REGCEA(0),
-		.RSTB(0),
-		.ENB(0),
-		.REGCEB(0),
-		.INJECTSBITERR(0),
-		.INJECTDBITERR(0),
+		.RSTA(),
+		.ENA(),
+		.REGCEA(),
+		.RSTB(),
+		.ENB(),
+		.REGCEB(),
+		.INJECTSBITERR(),
+		.INJECTDBITERR(),
 		.SBITERR(),
 		.DBITERR(),
 		.RDADDRECC());

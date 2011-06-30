@@ -49,14 +49,14 @@
 // supported by Xilinx, Mentor Graphics and Synplicity synthesis
 // tools. Ensure they are correct for your synthesis tool(s).
 
-// You must compile the wrapper file ctrl_fifo.v when simulating
-// the core, ctrl_fifo. When compiling the wrapper file, be sure to
+// You must compile the wrapper file gbe_ctrl_fifo.v when simulating
+// the core, gbe_ctrl_fifo. When compiling the wrapper file, be sure to
 // reference the XilinxCoreLib Verilog simulation library. For detailed
 // instructions, please refer to the "CORE Generator Help".
 
 `timescale 1ns/1ps
 
-module ctrl_fifo(
+module gbe_ctrl_fifo(
 	rst,
 	wr_clk,
 	rd_clk,
