@@ -12,8 +12,8 @@ REV_MINOR=1
 RCS_UPTODATE=0
 REV_RCS=0
 # Pin Constraints
-PCFILE=constraints/roach2_rev0.ucf
-#PCFILE=constraints/roach2_rev1.ucf
+#PCFILE=constraints/roach2_rev0.ucf
+PCFILE=constraints/roach2_rev1.ucf
 # Enter your source files here space seperated
 #      Note: no spaces in filenames
 

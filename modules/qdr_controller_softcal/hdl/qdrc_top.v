@@ -183,7 +183,10 @@ module qdrc_top (
     .data_valid    (data_valid)
   );
 
-  /* Generate qdr_rd_dvld 9 cycles after strb is sent */ 
+  /* Generate qdr_rd_dvld 10 cycles after strb is sent */ 
+  /* cypress parts seem to like 9 though */
+
+  /* Generate qdr_rd_dvld 10 cycles after strb is sent */ 
   localparam QDR_LATENCY = 9;
   reg [QDR_LATENCY - 1:0] strb_shifter;
 

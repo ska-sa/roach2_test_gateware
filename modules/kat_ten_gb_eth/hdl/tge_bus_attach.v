@@ -85,10 +85,10 @@ module tge_bus_attach #(
   localparam ARP_CACHE_OFFSET = 32'h3000;
   localparam ARP_CACHE_HIGH   = 32'h37FF;
 
-  wire reg_sel   = (cpu_addr >= REGISTERS_OFFSET) && (cpu_addr <= REGISTERS_HIGH);
-  wire rxbuf_sel = (cpu_addr >= RX_BUFFER_OFFSET) && (cpu_addr <= RX_BUFFER_HIGH);
-  wire txbuf_sel = (cpu_addr >= TX_BUFFER_OFFSET) && (cpu_addr <= TX_BUFFER_HIGH);
-  wire arp_sel   = (cpu_addr >= ARP_CACHE_OFFSET) && (cpu_addr <= ARP_CACHE_HIGH);
+  wire reg_sel   = cpu_trans && (cpu_addr >= REGISTERS_OFFSET) && (cpu_addr <= REGISTERS_HIGH);
+  wire rxbuf_sel = cpu_trans && (cpu_addr >= RX_BUFFER_OFFSET) && (cpu_addr <= RX_BUFFER_HIGH);
+  wire txbuf_sel = cpu_trans && (cpu_addr >= TX_BUFFER_OFFSET) && (cpu_addr <= TX_BUFFER_HIGH);
+  wire arp_sel   = cpu_trans && (cpu_addr >= ARP_CACHE_OFFSET) && (cpu_addr <= ARP_CACHE_HIGH);
 
   wire [31:0] reg_addr   = cpu_addr - REGISTERS_OFFSET;
   wire [31:0] rxbuf_addr = cpu_addr - RX_BUFFER_OFFSET;

@@ -1,10 +1,10 @@
 `timescale 1ns/1ps
 module kat_ten_gb_eth #(
-    parameter FABRIC_MAC     = 48'hffff_ffff_ffff,
-    parameter FABRIC_IP      = 32'hffff_ffff,
-    parameter FABRIC_PORT    = 16'hffff,
-    parameter FABRIC_GATEWAY = 8'd0,
-    parameter FABRIC_ENABLE  = 0,
+    parameter FABRIC_MAC     = 48'h1234_5678_9abc,
+    parameter FABRIC_IP      = {8'd192, 8'd168, 8'd43, 8'd40},
+    parameter FABRIC_PORT    = 16'h6666,
+    parameter FABRIC_GATEWAY = 8'd1,
+    parameter FABRIC_ENABLE  = 1,
     parameter SWING          = 1,
     parameter PREEMPHASYS    = 1,
     parameter CPU_TX_ENABLE  = 1,

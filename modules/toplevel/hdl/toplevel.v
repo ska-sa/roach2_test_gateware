@@ -186,7 +186,14 @@ module toplevel(
     .OB(aux_synco_n),
     .I (aux_synco)
   );
-  assign aux_synco = aux_clk | aux_synci;
+
+  reg [9:0] sync_counter;
+
+  always @(posedge sys_clk) begin
+    sync_counter <= sync_counter + 10'd1;
+  end
+
+  assign aux_synco = sync_counter == 10'b0;
 
   wire        wb_clk_i;
   wire        wb_rst_i;
@@ -224,6 +231,8 @@ module toplevel(
     .I (1'b0)
   );
 
+  wire ppc_prdy_int;
+
   epb_wb_bridge_reg epb_wb_bridge_reg_inst(
     .wb_clk_i (wb_clk_i),
     .wb_rst_i (wb_rst_i),
@@ -246,9 +255,10 @@ module toplevel(
     .epb_data_i    (epb_data_i),
     .epb_data_o    (epb_data_o),
     .epb_data_oe_n (epb_data_oe_n),
-    .epb_rdy       (ppc_prdy),
+    .epb_rdy       (ppc_prdy_int),
     .epb_doen      (ppc_doen)
   );
+  assign ppc_prdy = !ppc_pcsn[0] ? ppc_prdy_int : 1'b1;
 
   localparam NUM_SLAVES    = 24;
 
@@ -523,7 +533,7 @@ module toplevel(
   wire qdr_pll_lock;
 
   clk_gen #(
-    .CLK_FREQ (200)
+    .CLK_FREQ (150)
   ) clk_gen_qdr (
     .clk_100  (sys_clk),
     .reset    (sys_rst),
@@ -538,7 +548,7 @@ module toplevel(
   reg qdr_rstRR;
 
   always @(posedge qdr_clk0) begin
-    qdr_rstR  <= sys_rst || !qdr_pll_lock;
+    qdr_rstR  <= sys_rst || !idelay_rdy;
     qdr_rstRR <= qdr_rstR;
   end
   wire qdr_rst = qdr_rstRR;
@@ -641,9 +651,6 @@ module toplevel(
 `endif
 
   /************************ QDR 1 ****************************/
-
-  assign v6_gpio[8]  = qdr_clk0;
-  assign v6_gpio[11] = qdr_rst;
 
 `ifdef ENABLE_QDR
   wire [31:0] qdr1_app_addr;
@@ -1383,11 +1390,60 @@ generate for (I=0; I < 8; I=I+1) begin : gen_10ge
 
   );
 
-  assign tge_tx_valid[I]         = 1'b0;
-  assign tge_tx_end_of_frame[I]  = 1'b0;
-  assign tge_tx_data[I]          = 64'b0;
-  assign tge_tx_dest_ip[I]       = 32'b0;
-  assign tge_tx_dest_port[I]     = 16'b0;
+  reg ppc_poenR;
+  reg ppc_poenRR;
+
+  reg [1:0] foo_state;
+
+  reg [31:0] ppc_data_buf;
+  reg [31:0] ppc_addr_buf;
+
+  reg eek;
+  
+  reg [2:0] moo;
+
+  always @(posedge clk_200) begin
+    eek <= 1'b0;
+
+    ppc_poenR  <= ppc_poen;
+    ppc_poenRR <= ppc_poenR;
+
+    if (rst_200) begin
+      foo_state <= 2'b0;
+    end else begin
+      case (foo_state) 
+        2'b0: begin
+          if (!ppc_poenRR) begin
+            foo_state <= 2'b1;
+          end
+        end
+        2'b1: begin
+          if (ppc_poenRR) begin
+            foo_state <= 2'd0;
+            ppc_data_buf <= epb_data_i;
+            ppc_addr_buf <= ppc_paddr;
+            eek <= 1'b1;
+          end
+        end
+      endcase
+    end
+  end
+
+  reg [5:0] pkt_counter;
+  always @(posedge clk_200) begin
+    if (rst_200) begin
+      pkt_counter <= 6'd0;
+    end else begin
+      if (eek)
+        pkt_counter <= pkt_counter + 6'd1;
+    end
+  end
+
+  assign tge_tx_data[I]         = {ppc_addr_buf, ppc_data_buf};
+  assign tge_tx_valid[I]        = eek;
+  assign tge_tx_end_of_frame[I] = pkt_counter == {6{1'b1}};
+  assign tge_tx_dest_ip[I]      = {8'd192, 8'd168, 8'd43, 8'd1};
+  assign tge_tx_dest_port[I]    = 16'd6969;
 
   assign tge_rx_overrun_ack[I]   = 1'b0;
   assign tge_rx_ack[I]           = 1'b1;
@@ -1631,19 +1687,13 @@ end endgenerate
     .wb_err_o    (wbs_err_i[GBE_SLI])
   );
 
-  assign gbe_app_clk          = clk_200;
-  assign gbe_app_tx_data      = gbe_app_rx_data;
-  assign gbe_app_tx_dvld      = gbe_app_rx_dvld;
-  assign gbe_app_tx_eof       = gbe_app_rx_eof;
-  assign gbe_app_tx_destip    = {8'd192,8'd168,8'd41,8'd1};
-  assign gbe_app_tx_destport  = 16'd6666;
-  assign gbe_app_tx_rst       = 1'b0;
   assign gbe_app_rx_ack       = 1'b1;
   assign gbe_app_rx_rst       = 1'b0;
 
+
 `endif
 
-  assign debug_regin_0 = 32'hdead_0000;
+  assign debug_regin_0 = {31'h0, idelay_rdy};
   assign debug_regin_1 = 32'hdead_0001;
   assign debug_regin_2 = 32'hdead_0002;
   assign debug_regin_3 = 32'hdead_0003;
@@ -1651,5 +1701,7 @@ end endgenerate
   assign debug_regin_5 = 32'hdead_0005;
   assign debug_regin_6 = 32'hdead_0006;
   assign debug_regin_7 = 32'hdead_0007;
+
+  assign v6_gpio[15:8] = {clk_200, 2'b0, qdr_pll_lock, 1'b0, sys_rst, 1'b0, idelay_rdy};
 
 endmodule

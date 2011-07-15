@@ -32,6 +32,8 @@ module infrastructure(
 
   wire clk_fb;
 
+  wire pll_lock;
+
   MMCM_BASE #(
    .BANDWIDTH          ("OPTIMIZED"), // Jitter programming ("HIGH","LOW","OPTIMIZED")
    .CLKFBOUT_MULT_F    (6), // Multiply value for all CLKOUT (5.0-64.0).
@@ -81,7 +83,7 @@ module infrastructure(
    .CLKOUT4  (),
    .CLKOUT5  (),
    .CLKOUT6  (),
-   .LOCKED   (),
+   .LOCKED   (pll_lock),
 
    .PWRDWN   (1'b0),
    .RST      (1'b0)
@@ -97,15 +99,20 @@ module infrastructure(
   /* reset gen */
   reg sys_rst_reg;
   reg [15:0] sys_rst_counter;
-  always @(posedge sys_clk0) begin
-    sys_rst_counter <= sys_rst_counter + 16'd1;
-
-    if (sys_rst_counter == {16{1'b1}}) begin
-      sys_rst_reg <= 1'b0;
-      sys_rst_counter <= {16{1'b1}};
+  always @(posedge sys_clk_ds) begin
+    if (!pll_lock) begin
+      sys_rst_reg     <= 1'b0;
+      sys_rst_counter <= {16{1'b0}};
     end else begin
-      sys_rst_reg <= 1'b1;
+      if (sys_rst_counter == {16{1'b1}}) begin
+        sys_rst_reg <= 1'b0;
+        sys_rst_counter <= {16{1'b1}};
+      end else begin
+        sys_rst_reg <= 1'b1;
+        sys_rst_counter <= sys_rst_counter + 16'd1;
+      end
     end
+
   end
   assign sys_rst = sys_rst_reg;
 
