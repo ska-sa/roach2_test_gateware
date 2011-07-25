@@ -18,6 +18,7 @@ module clk_gen #(
                        CLK_FREQ == 200 ?  8 :
                        CLK_FREQ == 250 ? 10 :
                        CLK_FREQ == 266 ?  8 :
+                       CLK_FREQ == 300 ?  9 :
                        CLK_FREQ == 333 ? 10 :
                        CLK_FREQ == 350 ?  7 :
                                           8;
@@ -26,6 +27,7 @@ module clk_gen #(
                        CLK_FREQ == 200 ? 4 :
                        CLK_FREQ == 250 ? 4 :
                        CLK_FREQ == 266 ? 3 :
+                       CLK_FREQ == 300 ? 3 :
                        CLK_FREQ == 333 ? 3 :
                        CLK_FREQ == 350 ? 2 :
                                          4;

@@ -196,7 +196,7 @@ module qdrc_top (
   //localparam QDR_LATENCY = 9;
 
   /* Generate qdr_rd_dvld 10 cycles after strb is sent */ 
-  localparam QDR_LATENCY = 10;
+  localparam QDR_LATENCY = 11;
   reg [QDR_LATENCY - 1:0] strb_shifter;
   //synthesis attribute shreg_extract of strb_shifter is NO
 

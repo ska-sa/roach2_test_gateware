@@ -137,7 +137,7 @@ module qdrc_infrastructure(
     .DDR_CLK_EDGE ("SAME_EDGE"),
     .INIT         (1'b1),
     .SRTYPE       ("SYNC")
-  ) ODDR_qdr_sa (
+  ) ODDR_qdr_sa[ADDR_WIDTH - 1:0] (
     .Q  (qdr_sa_oddr),
     .C  (clk0),
     .CE (1'b1),
@@ -232,12 +232,7 @@ module qdrc_infrastructure(
   reg [DATA_WIDTH - 1:0] qdr_d_rise_reg;
   reg [DATA_WIDTH - 1:0] qdr_d_fall_reg;
 
-  always @(posedge clk270) begin
-  /* Sample DDR signals onto clk270 domain.
-   * The 270 clock is used to let the data lead the clock by
-   * 90 degrees behind the clock. The signals are registered
-   * to ease timing requirements.
-   */
+  always @(posedge clk0) begin
     qdr_d_rise_reg     <= qdr_d_rise_reg1;
     qdr_d_fall_reg     <= qdr_d_fall_reg1;
   end
@@ -250,6 +245,8 @@ module qdrc_infrastructure(
     .I (qdr_d_obuf)
   );
 
+  /* should be clk270 */
+  /* how do I make this make timing? */
   ODDR #(
     .DDR_CLK_EDGE ("SAME_EDGE"),
     .INIT         (1'b1),

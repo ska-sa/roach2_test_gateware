@@ -69,6 +69,12 @@ module qdrc_phy #(
 
   assign qdr_w_n = cal_busy ? cal_w_n : !phy_wr_strb;
   assign qdr_r_n = cal_busy ? cal_r_n : !phy_rd_strb;
+  reg [DATA_WIDTH-1:0] qdr_q_rise_z;
+  reg [DATA_WIDTH-1:0] qdr_q_fall_z;
+  always @(posedge clk) begin
+    qdr_q_rise_z <= qdr_q_rise;
+    qdr_q_fall_z <= qdr_q_fall;
+  end
 
   assign phy_rd_data = {cal_qdr_q_fall, cal_qdr_q_rise};
 
@@ -116,8 +122,8 @@ module qdrc_phy #(
     .DATA_WIDTH (DATA_WIDTH)
   ) qdrc_phy_train_inst (
     .clk           (div_clk),
-    .q_rise        (qdr_q_rise),
-    .q_fall        (qdr_q_fall),
+    .q_rise        (qdr_q_rise_z),
+    .q_fall        (qdr_q_fall_z),
     .dly_inc_dec_n (dly_inc_dec_n),
     .dly_en        (dly_en),
     .dly_rst       (dly_rst),
@@ -138,8 +144,8 @@ module qdrc_phy #(
     .bit_select    (bit_select),
     .align_strb    (align_strb),
     .align_en      (align_en),
-    .q_rise        (qdr_q_rise),
-    .q_fall        (qdr_q_fall),
+    .q_rise        (qdr_q_rise_z),
+    .q_fall        (qdr_q_fall_z),
     .cal_rise      (cal_qdr_q_rise),
     .cal_fall      (cal_qdr_q_fall)
   );
