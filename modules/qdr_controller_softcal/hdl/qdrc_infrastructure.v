@@ -3,6 +3,8 @@ module qdrc_infrastructure(
     clk0,
     clk180,
     clk270,
+
+    rst0,
     /* external signals */
     qdr_d,
     qdr_q,
@@ -26,12 +28,16 @@ module qdrc_infrastructure(
     dly_inc_dec_n,
     dly_en,
     dly_rst       
+    ,debug
   );
+  output [7:0] debug;
+
   parameter DATA_WIDTH     = 36;
   parameter ADDR_WIDTH     = 21;
   parameter CLK_FREQ       = 200;
 
   input clk0,   clk180,   clk270;
+  input rst0;
 
   output [DATA_WIDTH - 1:0] qdr_d;
   input  [DATA_WIDTH - 1:0] qdr_q;
@@ -104,62 +110,89 @@ module qdrc_infrastructure(
    *
    */
 
-  reg [ADDR_WIDTH - 1:0] qdr_sa_reg;
-  reg qdr_w_n_reg;
-  reg qdr_r_n_reg;
+  reg [ADDR_WIDTH - 1:0] qdr_sa_z;
+  reg qdr_w_n_z;
+  reg qdr_r_n_z;
+
+  reg [ADDR_WIDTH - 1:0] qdr_sa_zz;
+  reg qdr_w_n_zz;
+  reg qdr_r_n_zz;
 
   /* This signals are all sliced so use the register in the slice */
 
   always @(posedge clk0) begin 
-    qdr_sa_reg        <= qdr_sa_buf;
-    qdr_w_n_reg       <= qdr_w_n_buf;
-    qdr_r_n_reg       <= qdr_r_n_buf;
+    qdr_sa_z   <= qdr_sa_buf;
+    qdr_w_n_z  <= qdr_w_n_buf;
+    qdr_r_n_z  <= qdr_r_n_buf;
+    qdr_sa_zz  <= qdr_sa_z;
+    qdr_w_n_zz <= qdr_w_n_z;
+    qdr_r_n_zz <= qdr_r_n_z;
   end
 
-  reg [ADDR_WIDTH - 1:0] qdr_sa_reg0;
-  reg qdr_w_n_reg0;
-  reg qdr_r_n_reg0;
+  wire [ADDR_WIDTH - 1:0] qdr_sa_oddr;
+  wire qdr_w_n_oddr;
+  wire qdr_r_n_oddr;
 
-  always @(posedge clk180) begin 
-  /* Add delay to ease timing */
-    qdr_sa_reg0        <= qdr_sa_reg;
-    qdr_w_n_reg0       <= qdr_w_n_reg;
-    qdr_r_n_reg0       <= qdr_r_n_reg;
-  end
+  ODDR #(
+    .DDR_CLK_EDGE ("SAME_EDGE"),
+    .INIT         (1'b1),
+    .SRTYPE       ("SYNC")
+  ) ODDR_qdr_sa (
+    .Q  (qdr_sa_oddr),
+    .C  (clk0),
+    .CE (1'b1),
+    .D1 (qdr_sa_zz), //Rising Edge
+    .D2 (qdr_sa_z), //Falling Edge
+    .R  (1'b0),
+    .S  (1'b0)
+  );
 
-  reg [ADDR_WIDTH - 1:0] qdr_sa_iob;
-  reg qdr_w_n_iob;
-  reg qdr_r_n_iob;
-  //synthesis attribute IOB of qdr_sa_iob        is "TRUE"
-  //synthesis attribute IOB of qdr_w_n_iob       is "TRUE"
-  //synthesis attribute IOB of qdr_r_n_iob       is "TRUE"
+  ODDR #(
+    .DDR_CLK_EDGE ("SAME_EDGE"),
+    .INIT         (1'b1),
+    .SRTYPE       ("SYNC")
+  ) ODDR_qdr_w_n (
+    .Q  (qdr_w_n_oddr),
+    .C  (clk0),
+    .CE (1'b1),
+    .D1 (qdr_w_n_zz), //Rising Edge
+    .D2 (qdr_w_n_z), //Falling Edge
+    .R  (1'b0),
+    .S  (1'b0)
+  );
 
-
-  always @(posedge clk180) begin 
-  /* Add delay to ease timing */
-    qdr_sa_iob        <= qdr_sa_reg0;
-    qdr_w_n_iob       <= qdr_w_n_reg0;
-    qdr_r_n_iob       <= qdr_r_n_reg0;
-  end
+  ODDR #(
+    .DDR_CLK_EDGE ("SAME_EDGE"),
+    .INIT         (1'b1),
+    .SRTYPE       ("SYNC")
+  ) ODDR_qdr_r_n (
+    .Q  (qdr_r_n_oddr),
+    .C  (clk0),
+    .CE (1'b1),
+    .D1 (qdr_r_n_zz), //Rising Edge
+    .D2 (qdr_r_n_z), //Falling Edge
+    .R  (1'b0),
+    .S  (1'b0)
+  );
 
   OBUF #(
     .IOSTANDARD("HSTL_I")
   ) OBUF_addr[ADDR_WIDTH - 1:0](
-    .I (qdr_sa_iob),
+    .I (qdr_sa_oddr),
     .O (qdr_sa)
   );
 
   OBUF #(
     .IOSTANDARD("HSTL_I")
   ) OBUF_w_n(
-    .I (qdr_w_n_iob),
+    .I (qdr_w_n_oddr),
     .O (qdr_w_n)
   );
 
   OBUF #(
     .IOSTANDARD("HSTL_I")
   ) OBUF_r_n(
-    .I (qdr_r_n_iob),
+    .I (qdr_r_n_oddr),
     .O (qdr_r_n)
   );
 
@@ -278,6 +311,8 @@ module qdrc_infrastructure(
     .Q1 (qdr_q_rise_int),
     .Q2 (qdr_q_fall_int)
   );
+
+  assign debug = 8'b0;
 
   assign qdr_q_rise = qdr_q_rise_int;
   assign qdr_q_fall = qdr_q_fall_int;

@@ -208,11 +208,11 @@ module qdr_cpu_interface(
   assign qdr_wr_en   = qdr_wr_en_reg;
   assign qdr_wr_data = qdr_wr_en_reg ? wr_buffer[143:72] : wr_buffer[71:0];
 
-  reg [1:0] rd_state;
-  localparam RD_IDLE  = 0;
-  localparam RD_TRANS = 1;
-  localparam RD_DATA  = 2;
-  localparam RD_WAIT  = 3;
+  reg [3:0] rd_state;
+  localparam RD_IDLE  = 4'b1;
+  localparam RD_TRANS = 4'b10;
+  localparam RD_DATA  = 4'b100;
+  localparam RD_WAIT  = 4'b1000;
 
   reg qdr_rd_en_reg;
 
@@ -251,7 +251,7 @@ module qdr_cpu_interface(
   assign qdr_rd_en = qdr_rd_en_reg;
 
   always @(posedge qdr_clk) begin
-    if (qdr_rd_dvld && rd_state == RD_TRANS) begin
+    if (rd_state == RD_TRANS) begin
       rd_buffer[143:72] <= qdr_rd_data;
     end
     if (rd_state == RD_DATA) begin

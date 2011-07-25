@@ -33,7 +33,7 @@ XST_ARGS=run,\
 -use_clock_enable Auto,\
 -use_sync_set Auto,\
 -use_sync_reset Auto,\
--equivalent_register_removal YES,\
+-equivalent_register_removal NO,\
 -vlgincdir $(VINC)
 
 LANGUAGE=usenglish

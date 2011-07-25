@@ -117,25 +117,24 @@ module toplevel(
     input    [2:0] xaui_refclk_p
   );
   
-  // Make sure clk_125 is not renamed
-  // synthesis attribute KEEP of clk_125 is TRUE
-  wire clk_125;
-  // synthesis attribute KEEP of sys_clk is TRUE
-  wire sys_clk;
   wire clk_200;
+  wire clk_125;
+  wire clk_100;
 
-  wire sys_rst;
   wire rst_200;
+  wire rst_125;
+  wire rst_100;
+
   wire idelay_rdy;
 
   infrastructure infrastructure_inst (
     .sys_clk_buf_n  (sys_clk_n),
     .sys_clk_buf_p  (sys_clk_p),
-    .sys_clk0       (sys_clk),
+    .sys_clk0       (clk_100),
     .sys_clk180     (),
     .sys_clk270     (),
     .clk_200        (clk_200),
-    .sys_rst        (sys_rst),
+    .sys_rst        (rst_100),
     .idelay_rdy     (idelay_rdy)
   );
 
@@ -143,7 +142,7 @@ module toplevel(
   reg rst_200RR;
 
   always @(posedge clk_200) begin
-    rst_200R  <= sys_rst;
+    rst_200R  <= rst_100;
     rst_200RR <= rst_200R;
   end
   assign rst_200 = rst_200RR;
@@ -152,8 +151,8 @@ module toplevel(
   wire [2:0] knight_rider_speed;
 
   knight_rider knight_rider_inst(
-    .clk  (sys_clk),
-    .rst  (sys_rst),
+    .clk  (clk_100),
+    .rst  (rst_100),
     .led  (v6_gpio[7:0]),
     .rate (knight_rider_speed)
   );
@@ -189,7 +188,7 @@ module toplevel(
 
   reg [9:0] sync_counter;
 
-  always @(posedge sys_clk) begin
+  always @(posedge clk_100) begin
     sync_counter <= sync_counter + 10'd1;
   end
 
@@ -206,9 +205,6 @@ module toplevel(
   wire [31:0] wbm_dat_i;
   wire        wbm_ack_i;
   wire        wbm_err_i;
-
-  assign wb_clk_i = sys_clk;
-  assign wb_rst_i = sys_rst;
 
   wire [0:31] epb_data_i;
   wire [0:31] epb_data_o;
@@ -232,6 +228,17 @@ module toplevel(
   );
 
   wire ppc_prdy_int;
+
+  reg epb_rstR;
+  reg epb_rstRR;
+
+  always @(posedge epb_clk) begin
+    epb_rstR  <= rst_100;
+    epb_rstRR <= epb_rstR;
+  end
+
+  assign wb_clk_i = epb_clk;
+  assign wb_rst_i = epb_rstRR;
 
   epb_wb_bridge_reg epb_wb_bridge_reg_inst(
     .wb_clk_i (wb_clk_i),
@@ -435,7 +442,7 @@ module toplevel(
     .regout_7  (debug_regout_7)
   );
 
-  assign debug_clk = sys_clk;
+  assign debug_clk = clk_100;
 
   /************************ ZDOK 0 ****************************/
 
@@ -533,10 +540,10 @@ module toplevel(
   wire qdr_pll_lock;
 
   clk_gen #(
-    .CLK_FREQ (150)
+    .CLK_FREQ (333)
   ) clk_gen_qdr (
-    .clk_100  (sys_clk),
-    .reset    (sys_rst),
+    .clk_100  (clk_100),
+    .reset    (rst_100),
     .clk0     (qdr_clk0),
     .clk180   (qdr_clk180),
     .clk270   (qdr_clk270),
@@ -547,11 +554,24 @@ module toplevel(
   reg qdr_rstR;
   reg qdr_rstRR;
 
+  reg qdr0_rst;
+  reg qdr1_rst;
+  reg qdr2_rst;
+  reg qdr3_rst;
+  //synthesis attribute equivalent_register_removal of qdr0_rst is no
+  //synthesis attribute equivalent_register_removal of qdr1_rst is no
+  //synthesis attribute equivalent_register_removal of qdr2_rst is no
+  //synthesis attribute equivalent_register_removal of qdr3_rst is no
+
   always @(posedge qdr_clk0) begin
-    qdr_rstR  <= sys_rst || !idelay_rdy;
+    //qdr_rstR  <= rst_100 || !idelay_rdy;
+    qdr_rstR  <= !qdr_pll_lock || !idelay_rdy;
     qdr_rstRR <= qdr_rstR;
+    qdr0_rst  <= qdr_rstRR;
+    qdr1_rst  <= qdr_rstRR;
+    qdr2_rst  <= qdr_rstRR;
+    qdr3_rst  <= qdr_rstRR;
   end
-  wire qdr_rst = qdr_rstRR;
 
   /************************ QDR 0 ****************************/
 
@@ -594,7 +614,7 @@ module toplevel(
     .clk0        (qdr_clk0),
     .clk180      (qdr_clk180),
     .clk270      (qdr_clk270),
-    .reset       (qdr_rst),
+    .reset       (qdr0_rst),
 
     .phy_rdy     (qdr0_phy_rdy),
     .cal_fail    (qdr0_cal_fail),
@@ -605,6 +625,7 @@ module toplevel(
     .usr_rd_strb (qdr0_app_rd_en),
     .usr_rd_data (qdr0_app_rd_data),
     .usr_rd_dvld (qdr0_app_rd_dvld)
+
   );
 
   qdr_cpu_interface qdr0_cpu_interface(
@@ -621,7 +642,7 @@ module toplevel(
     .wb_err_o    (wbs_err_i[QDR0_SLI]),
 
     .qdr_clk     (qdr_clk0),
-    .qdr_rst     (qdr_rst),
+    .qdr_rst     (qdr0_rst),
 
     .qdr_addr    (qdr0_app_addr),
     .qdr_wr_en   (qdr0_app_wr_en),
@@ -691,7 +712,7 @@ module toplevel(
     .clk0        (qdr_clk0),
     .clk180      (qdr_clk180),
     .clk270      (qdr_clk270),
-    .reset       (qdr_rst),
+    .reset       (qdr1_rst),
 
     .phy_rdy     (qdr1_phy_rdy),
     .cal_fail    (qdr1_cal_fail),
@@ -718,7 +739,7 @@ module toplevel(
     .wb_err_o    (wbs_err_i[QDR1_SLI]),
 
     .qdr_clk     (qdr_clk0),
-    .qdr_rst     (qdr_rst),
+    .qdr_rst     (qdr1_rst),
 
     .qdr_addr    (qdr1_app_addr),
     .qdr_wr_en   (qdr1_app_wr_en),
@@ -788,7 +809,7 @@ module toplevel(
     .clk0        (qdr_clk0),
     .clk180      (qdr_clk180),
     .clk270      (qdr_clk270),
-    .reset       (qdr_rst),
+    .reset       (qdr2_rst),
 
     .phy_rdy     (qdr2_phy_rdy),
     .cal_fail    (qdr2_cal_fail),
@@ -799,6 +820,7 @@ module toplevel(
     .usr_rd_strb (qdr2_app_rd_en),
     .usr_rd_data (qdr2_app_rd_data),
     .usr_rd_dvld (qdr2_app_rd_dvld)
+    ,.debug (qdr_debug)
   );
 
   qdr_cpu_interface qdr2_cpu_interface(
@@ -815,7 +837,7 @@ module toplevel(
     .wb_err_o    (wbs_err_i[QDR2_SLI]),
 
     .qdr_clk     (qdr_clk0),
-    .qdr_rst     (qdr_rst),
+    .qdr_rst     (qdr2_rst),
 
     .qdr_addr    (qdr2_app_addr),
     .qdr_wr_en   (qdr2_app_wr_en),
@@ -843,6 +865,8 @@ module toplevel(
     .O (qdr2_q_noreduce)
   );
 `endif
+
+  assign v6_gpio[15:8] = qdr_debug;
 
   /************************ QDR 3 ****************************/
 `ifdef ENABLE_QDR
@@ -885,7 +909,7 @@ module toplevel(
     .clk0        (qdr_clk0),
     .clk180      (qdr_clk180),
     .clk270      (qdr_clk270),
-    .reset       (qdr_rst),
+    .reset       (qdr3_rst),
 
     .phy_rdy     (qdr3_phy_rdy),
     .cal_fail    (qdr3_cal_fail),
@@ -912,7 +936,7 @@ module toplevel(
     .wb_err_o    (wbs_err_i[QDR3_SLI]),
 
     .qdr_clk     (qdr_clk0),
-    .qdr_rst     (qdr_rst),
+    .qdr_rst     (qdr3_rst),
 
     .qdr_addr    (qdr3_app_addr),
     .qdr_wr_en   (qdr3_app_wr_en),
@@ -953,8 +977,8 @@ module toplevel(
   ddr3_clk #(
     .DRAM_FREQUENCY (400)
   ) ddr3_clk_inst (
-    .clk_100          (sys_clk),       
-    .sys_rst          (sys_rst),        
+    .clk_100          (clk_100),       
+    .sys_rst          (rst_100),        
     .iodelay_ctrl_rdy (idelay_rdy),
 
     .clk_mem          (ddr3_clk_mem),     // 2x logic clock
@@ -1106,7 +1130,7 @@ module toplevel(
   OBUFDS ddr3_obufds(
     .O  (ddr3_ck_p),
     .OB (ddr3_ck_n),
-    .I  (sys_clk)
+    .I  (clk_100)
   );
 
   assign ddr3_dm      =  9'b0;
@@ -1131,7 +1155,7 @@ module toplevel(
   reg xaui_rstR;
   reg xaui_rstRR;
   always @(posedge xaui_clk) begin
-    xaui_rstR  <= sys_rst;
+    xaui_rstR  <= rst_100;
     xaui_rstRR <= xaui_rstR;
   end
   wire xaui_rst = xaui_rstRR;
@@ -1221,7 +1245,7 @@ module toplevel(
   xaui_infrastructure #(
     .ENABLE_MASK (TGE_ENABLE_MASK)
   ) xaui_infrastructure_inst (
-    .mgt_reset          (sys_rst),
+    .mgt_reset          (rst_100),
 
     .xaui_refclk_n      (xaui_refclk_n),
     .xaui_refclk_p      (xaui_refclk_p),
@@ -1457,10 +1481,11 @@ end endgenerate
   reg sgmii_reset_R;
   reg sgmii_reset_RR;
   always @(posedge clk_125) begin
-    sgmii_reset_R  <= sys_rst;
+    sgmii_reset_R  <= rst_100;
     sgmii_reset_RR <= sgmii_reset_R;
   end
   wire sgmii_reset = sgmii_reset_RR;
+  assign rst_125 = sgmii_reset;
   
   wire       recclk_125;
 
@@ -1702,6 +1727,5 @@ end endgenerate
   assign debug_regin_6 = 32'hdead_0006;
   assign debug_regin_7 = 32'hdead_0007;
 
-  assign v6_gpio[15:8] = {clk_200, 2'b0, qdr_pll_lock, 1'b0, sys_rst, 1'b0, idelay_rdy};
 
 endmodule
