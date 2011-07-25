@@ -540,7 +540,7 @@ module toplevel(
   wire qdr_pll_lock;
 
   clk_gen #(
-    .CLK_FREQ (266)
+    .CLK_FREQ (300)
   ) clk_gen_qdr (
     .clk_100  (clk_100),
     .reset    (rst_100),
