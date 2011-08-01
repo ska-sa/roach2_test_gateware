@@ -39,10 +39,7 @@ module qdrc_top (
     data_value,
     data_sampled,
     data_valid    
-    ,
-    debug
   );
-  output [7:0] debug;
   parameter DATA_WIDTH   = 36;
   parameter ADDR_WIDTH   = 21;
 
@@ -107,7 +104,6 @@ module qdrc_top (
     .DATA_WIDTH (DATA_WIDTH),
     .ADDR_WIDTH (ADDR_WIDTH)
   ) qdrc_infrastructure_inst(
-  .debug(debug),
     /* general signals */
     .clk0     (clk0),
     .clk180   (clk180),
@@ -191,12 +187,7 @@ module qdrc_top (
 
   /* Generate qdr_rd_dvld 10 cycles after strb is sent */ 
 
-  /* delay scheme not quite right */
-  
-  //localparam QDR_LATENCY = 9;
-
-  /* Generate qdr_rd_dvld 10 cycles after strb is sent */ 
-  localparam QDR_LATENCY = 11;
+  localparam QDR_LATENCY = 15;
   reg [QDR_LATENCY - 1:0] strb_shifter;
   //synthesis attribute shreg_extract of strb_shifter is NO
 

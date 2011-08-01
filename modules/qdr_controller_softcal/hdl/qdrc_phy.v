@@ -1,6 +1,7 @@
 module qdrc_phy #(
     parameter DATA_WIDTH   = 36,
-    parameter ADDR_WIDTH   = 21
+    parameter ADDR_WIDTH   = 21,
+    parameter Q_DELAY      = 3
   ) ( 
     input                       clk,
     input                       div_clk,
@@ -69,12 +70,39 @@ module qdrc_phy #(
 
   assign qdr_w_n = cal_busy ? cal_w_n : !phy_wr_strb;
   assign qdr_r_n = cal_busy ? cal_r_n : !phy_rd_strb;
+
   reg [DATA_WIDTH-1:0] qdr_q_rise_z;
   reg [DATA_WIDTH-1:0] qdr_q_fall_z;
+
+  reg [DATA_WIDTH-1:0] qdr_q_rise_zz;
+  reg [DATA_WIDTH-1:0] qdr_q_fall_zz;
+
+  reg [DATA_WIDTH-1:0] qdr_q_rise_zzz;
+  reg [DATA_WIDTH-1:0] qdr_q_fall_zzz;
+
+  reg [DATA_WIDTH-1:0] qdr_q_rise_zzzz;
+  reg [DATA_WIDTH-1:0] qdr_q_fall_zzzz;
+
+  /* this seems to be higher than it might be otherwise due to dodgy IO placements on r2 */
+  //synthesis attribute shreg_extract of qdr_q_rise_z is no
+  //synthesis attribute shreg_extract of qdr_q_fall_z is no
+  //synthesis attribute shreg_extract of qdr_q_rise_zz is no
+  //synthesis attribute shreg_extract of qdr_q_fall_zz is no
+  //synthesis attribute shreg_extract of qdr_q_rise_zzz is no
+  //synthesis attribute shreg_extract of qdr_q_fall_zzz is no
+  
   always @(posedge clk) begin
-    qdr_q_rise_z <= qdr_q_rise;
-    qdr_q_fall_z <= qdr_q_fall;
+    qdr_q_rise_z   <= qdr_q_rise;
+    qdr_q_fall_z   <= qdr_q_fall;
+    qdr_q_rise_zz  <= qdr_q_rise_z;
+    qdr_q_fall_zz  <= qdr_q_fall_z;
+    qdr_q_rise_zzz <= qdr_q_rise_zz;
+    qdr_q_fall_zzz <= qdr_q_fall_zz;
+    qdr_q_rise_zzzz <= qdr_q_rise_zzz;
+    qdr_q_fall_zzzz <= qdr_q_fall_zzz;
   end
+  wire [DATA_WIDTH-1:0] qdr_q_rise_delayed = qdr_q_rise_zzzz;
+  wire [DATA_WIDTH-1:0] qdr_q_fall_delayed = qdr_q_fall_zzzz;
 
   assign phy_rd_data = {cal_qdr_q_fall, cal_qdr_q_rise};
 
@@ -122,8 +150,8 @@ module qdrc_phy #(
     .DATA_WIDTH (DATA_WIDTH)
   ) qdrc_phy_train_inst (
     .clk           (div_clk),
-    .q_rise        (qdr_q_rise_z),
-    .q_fall        (qdr_q_fall_z),
+    .q_rise        (qdr_q_rise_delayed),
+    .q_fall        (qdr_q_fall_delayed),
     .dly_inc_dec_n (dly_inc_dec_n),
     .dly_en        (dly_en),
     .dly_rst       (dly_rst),
@@ -144,8 +172,8 @@ module qdrc_phy #(
     .bit_select    (bit_select),
     .align_strb    (align_strb),
     .align_en      (align_en),
-    .q_rise        (qdr_q_rise_z),
-    .q_fall        (qdr_q_fall_z),
+    .q_rise        (qdr_q_rise_delayed),
+    .q_fall        (qdr_q_fall_delayed),
     .cal_rise      (cal_qdr_q_rise),
     .cal_fall      (cal_qdr_q_fall)
   );

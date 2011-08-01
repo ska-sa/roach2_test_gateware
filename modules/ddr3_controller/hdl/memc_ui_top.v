@@ -185,7 +185,7 @@ module memc_ui_top #
                                        //   = "OFF" - DDR2 SDRAM.
    parameter PHASE_DETECT            = "ON",
                                        // # = "ON", "OFF".
-   parameter CAL_WIDTH               = "HALF",
+   parameter CAL_WIDTH               = "FULL",
                                        // # = "HALF", "FULL".
    parameter RTT_NOM                 = "60",
                                        // DDR3 SDRAM:
@@ -247,13 +247,13 @@ module memc_ui_top #
                                        // memory tRRD paramter.
    parameter tRAS                    = 36000,
                                        // memory tRAS paramter.
-   parameter tRCD                    = 13500,
+   parameter tRCD                    = 13125,
                                        // memory tRCD paramter.
    parameter tREFI                   = 7800000,
                                        // memory tREFI paramter.
-   parameter tRFC                    = 160000,
+   parameter tRFC                    = 110000,
                                        // memory tRFC paramter.
-   parameter tRP                     = 13500,
+   parameter tRP                     = 13125,
                                        // memory tRP paramter.
    parameter tRTP                    = 7500,
                                        // memory tRTP paramter.

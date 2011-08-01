@@ -21,10 +21,12 @@ XST_ARGS=run,\
 -hierarchy_separator /,\
 -bus_delimiter <>,\
 -case maintain,\
+-shreg_extract NO,\
 -fsm_extract YES,\
 -fsm_encoding Auto,\
 -safe_implementation No,\
 -fsm_style lut,\
+-max_fanout 50,\
 -resource_sharing YES,\
 -iobuf YES,\
 -opt_level 2,\

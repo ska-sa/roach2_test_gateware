@@ -115,7 +115,7 @@ module ddr3_controller #
    parameter DQS_CNT_WIDTH           = 4,
                                        // # = ceil(log2(DQS_WIDTH)).
    parameter RANK_WIDTH              = 1,
-                                       // # = ceil(log2(RANKS)).
+                                       // # = ceil(log2(FULL)).
    parameter BANK_WIDTH              = 3,
                                        // # of memory Bank Address bits.
    parameter CK_WIDTH                = 1,
@@ -217,7 +217,7 @@ module ddr3_controller #
    output [(CS_WIDTH*nCS_PER_RANK)-1:0] ddr3_cs_n,
    output [(CS_WIDTH*nCS_PER_RANK)-1:0] ddr3_odt,
    output [CKE_WIDTH-1:0]               ddr3_cke,
-   output [DM_WIDTH-1:0]                 ddr3_dm,
+   output [DM_WIDTH-1:0]                ddr3_dm,
    inout  [DQS_WIDTH-1:0]               ddr3_dqs_p,
    inout  [DQS_WIDTH-1:0]               ddr3_dqs_n,
    output [CK_WIDTH-1:0]                ddr3_ck_p,
@@ -240,7 +240,6 @@ module ddr3_controller #
    input                              app_wdf_wren
   );
 
-  localparam SYSCLK_PERIOD          = tCK * nCK_PER_CLK;
 
   //***************************************************************************
 

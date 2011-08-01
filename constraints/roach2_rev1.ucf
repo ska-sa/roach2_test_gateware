@@ -23,14 +23,6 @@ TIMESPEC TS_xaui_clk = PERIOD xaui_clk 156.25 MHz;
 #TIMESPEC TS_false_path_ddr3_1 = FROM ddr3_clk_div2 TO  sys_clk        TIG;
 `endif
 
-`ifdef ENABLE_QDR
-# 36 Bit QDR II+ SRAM signals
-#force the timing analyser to treat sys_clk and qdr_clk as asynchronous
-#NET "qdr_clk0"  TNM = qdr_clk0;
-#TIMESPEC TS_false_path_qdr_0 = FROM sys_clk      TO  qdr_clk0 TIG;
-#TIMESPEC TS_false_path_qdr_1 = FROM qdr_clk0     TO  sys_clk TIG;
-`endif
-
 # VRN/VRP sharing
 
 CONFIG DCI_CASCADE = "14 13";

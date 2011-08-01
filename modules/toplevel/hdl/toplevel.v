@@ -540,7 +540,7 @@ module toplevel(
   wire qdr_pll_lock;
 
   clk_gen #(
-    .CLK_FREQ (300)
+    .CLK_FREQ (266)
   ) clk_gen_qdr (
     .clk_100  (clk_100),
     .reset    (rst_100),
@@ -820,7 +820,6 @@ module toplevel(
     .usr_rd_strb (qdr2_app_rd_en),
     .usr_rd_data (qdr2_app_rd_data),
     .usr_rd_dvld (qdr2_app_rd_dvld)
-    ,.debug (qdr_debug)
   );
 
   qdr_cpu_interface qdr2_cpu_interface(
@@ -865,8 +864,6 @@ module toplevel(
     .O (qdr2_q_noreduce)
   );
 `endif
-
-  assign v6_gpio[15:8] = qdr_debug;
 
   /************************ QDR 3 ****************************/
 `ifdef ENABLE_QDR
@@ -978,7 +975,7 @@ module toplevel(
     .DRAM_FREQUENCY (400)
   ) ddr3_clk_inst (
     .clk_100          (clk_100),       
-    .sys_rst          (rst_100),        
+    .sys_rst          (1'b0),        
     .iodelay_ctrl_rdy (idelay_rdy),
 
     .clk_mem          (ddr3_clk_mem),     // 2x logic clock
@@ -1009,21 +1006,21 @@ module toplevel(
   wire             ddr3_app_wdf_wren;
 
   ddr3_controller #(
-    .tCK           (4000),
+    .tCK           (2500),
     .RANK_WIDTH    (1),
     .BANK_WIDTH    (3),
     .CK_WIDTH      (1),
     .CKE_WIDTH     (1),
-    .COL_WIDTH     (10),
+    .COL_WIDTH     (11),
     .CS_WIDTH      (1),
     .DM_WIDTH      (9),
     .DQ_WIDTH      (72),
     .DQS_WIDTH     (9),
-    .ROW_WIDTH     (15),
+    .ROW_WIDTH     (14),
     .tPRDI         (1_000_000),
     .tREFI         (7800000),
     .ZQI           (512),
-    .ADDR_WIDTH    (29),
+    .ADDR_WIDTH    (29), // ROW + COL + BANK + RANK
     .DATA_WIDTH    (72)
   ) ddr3_controller_inst (
     .clk_mem           (ddr3_clk_mem),
@@ -1065,7 +1062,7 @@ module toplevel(
   );
 
   OBUF obuf_ddr3_sn[2:0](
-    .I (3'b1),
+    .I (3'b111),
     .O (ddr3_sn[3:1])
   );
 

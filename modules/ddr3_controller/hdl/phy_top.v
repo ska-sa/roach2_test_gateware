@@ -377,6 +377,7 @@ module phy_top #
   wire [CKE_WIDTH-1:0]             phy_cke1;
   wire [CS_WIDTH*nCS_PER_RANK-1:0] phy_cs_n0;
   wire [CS_WIDTH*nCS_PER_RANK-1:0] phy_cs_n1;
+  // synthesis attribute max_fanout of phy_init_data_sel is 25
   wire                             phy_init_data_sel;
   wire [0:0]                       phy_io_config;  
   wire                             phy_io_config_strobe;

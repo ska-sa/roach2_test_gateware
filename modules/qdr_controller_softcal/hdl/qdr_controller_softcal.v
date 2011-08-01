@@ -34,10 +34,8 @@ module qdr_controller_softcal (
     usr_rd_data,
     usr_rd_dvld,
 
-    usr_wr_data,
-    debug
+    usr_wr_data
   );
-  output [7:0] debug;
   parameter DATA_WIDTH   = 36;
   parameter ADDR_WIDTH   = 22;
 
@@ -167,7 +165,6 @@ module qdr_controller_softcal (
     .data_value    (data_value),
     .data_sampled  (data_sampled),
     .data_valid    (data_valid)
-    ,.debug(debug)
   );
 
 endmodule

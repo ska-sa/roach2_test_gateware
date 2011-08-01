@@ -378,6 +378,15 @@ module phy_control_io #
   // cause any issues in hardware).
   //*****************************************************************
 
+  /* ROACH-2 Timing workaround */
+
+  reg foo;
+  reg foofoo;
+  always @(posedge clk) begin
+    foo <= mux_reset_n;
+    foofoo <= foo;
+  end
+
   ODDR #
     (
      .DDR_CLK_EDGE ("SAME_EDGE"),
@@ -389,9 +398,9 @@ module phy_control_io #
        .Q  (ddr_reset_n),
        .C  (clk),
        .CE (1'b1),
-       .D1 (mux_reset_n),
-       .D2 (mux_reset_n),
-       .R  (rst_r),
+       .D1 (foofoo),
+       .D2 (foofoo),
+       .R  (1'b0),
        .S  (1'b0)
        );
 

@@ -28,10 +28,7 @@ module qdrc_infrastructure(
     dly_inc_dec_n,
     dly_en,
     dly_rst       
-    ,debug
   );
-  output [7:0] debug;
-
   parameter DATA_WIDTH     = 36;
   parameter ADDR_WIDTH     = 21;
   parameter CLK_FREQ       = 200;
@@ -118,6 +115,10 @@ module qdrc_infrastructure(
   reg qdr_w_n_zz;
   reg qdr_r_n_zz;
 
+  reg [ADDR_WIDTH - 1:0] qdr_sa_zzz;
+  reg qdr_w_n_zzz;
+  reg qdr_r_n_zzz;
+
   /* This signals are all sliced so use the register in the slice */
 
   always @(posedge clk0) begin 
@@ -127,6 +128,9 @@ module qdrc_infrastructure(
     qdr_sa_zz  <= qdr_sa_z;
     qdr_w_n_zz <= qdr_w_n_z;
     qdr_r_n_zz <= qdr_r_n_z;
+    qdr_sa_zzz  <= qdr_sa_zz;
+    qdr_w_n_zzz <= qdr_w_n_zz;
+    qdr_r_n_zzz <= qdr_r_n_zz;
   end
 
   wire [ADDR_WIDTH - 1:0] qdr_sa_oddr;
@@ -141,8 +145,8 @@ module qdrc_infrastructure(
     .Q  (qdr_sa_oddr),
     .C  (clk0),
     .CE (1'b1),
-    .D1 (qdr_sa_zz), //Rising Edge
-    .D2 (qdr_sa_z), //Falling Edge
+    .D1 (qdr_sa_zzz), //Rising Edge
+    .D2 (qdr_sa_zz), //Falling Edge
     .R  (1'b0),
     .S  (1'b0)
   );
@@ -155,8 +159,8 @@ module qdrc_infrastructure(
     .Q  (qdr_w_n_oddr),
     .C  (clk0),
     .CE (1'b1),
-    .D1 (qdr_w_n_zz), //Rising Edge
-    .D2 (qdr_w_n_z), //Falling Edge
+    .D1 (qdr_w_n_zzz), //Rising Edge
+    .D2 (qdr_w_n_zz), //Falling Edge
     .R  (1'b0),
     .S  (1'b0)
   );
@@ -169,8 +173,8 @@ module qdrc_infrastructure(
     .Q  (qdr_r_n_oddr),
     .C  (clk0),
     .CE (1'b1),
-    .D1 (qdr_r_n_zz), //Rising Edge
-    .D2 (qdr_r_n_z), //Falling Edge
+    .D1 (qdr_r_n_zzz), //Rising Edge
+    .D2 (qdr_r_n_zz), //Falling Edge
     .R  (1'b0),
     .S  (1'b0)
   );
@@ -205,15 +209,17 @@ module qdrc_infrastructure(
 
 
   /******************* DDR Data Outputs ********************
-   *
+   * Three cycles of latency. First sucked into slices, 2nd & 3rd to aid routing
+   * last to aid 270 switch
    */
+
+   /* TODO: scheme to avoid the 270 registration issue 
+            cost extra registers and reduces top performance */
 
   reg [DATA_WIDTH - 1:0] qdr_d_rise_reg0;
   reg [DATA_WIDTH - 1:0] qdr_d_fall_reg0;
 
   always @(posedge clk0) begin
-  /* Delay the write data by one cycle (qdr protocol,
-   * requires datat to lag control*/
     qdr_d_rise_reg0     <= qdr_d_rise;
     qdr_d_fall_reg0     <= qdr_d_fall;
   end
@@ -222,19 +228,25 @@ module qdrc_infrastructure(
   reg [DATA_WIDTH - 1:0] qdr_d_fall_reg1;
 
   always @(posedge clk0) begin
-  /* Delay to match the extra cycle on control lines 
-   * due to extra iob delay route*/
     qdr_d_rise_reg1     <= qdr_d_rise_reg0;
     qdr_d_fall_reg1     <= qdr_d_fall_reg0;
+  end
+
+  reg [DATA_WIDTH - 1:0] qdr_d_rise_reg2;
+  reg [DATA_WIDTH - 1:0] qdr_d_fall_reg2;
+
+  always @(posedge clk0) begin
+    qdr_d_rise_reg2     <= qdr_d_rise_reg1;
+    qdr_d_fall_reg2     <= qdr_d_fall_reg1;
   end
 
 
   reg [DATA_WIDTH - 1:0] qdr_d_rise_reg;
   reg [DATA_WIDTH - 1:0] qdr_d_fall_reg;
 
-  always @(posedge clk0) begin
-    qdr_d_rise_reg     <= qdr_d_rise_reg1;
-    qdr_d_fall_reg     <= qdr_d_fall_reg1;
+  always @(posedge clk270) begin
+    qdr_d_rise_reg     <= qdr_d_rise_reg2;
+    qdr_d_fall_reg     <= qdr_d_fall_reg2;
   end
 
   wire [DATA_WIDTH - 1:0] qdr_d_obuf;
@@ -245,7 +257,6 @@ module qdrc_infrastructure(
     .I (qdr_d_obuf)
   );
 
-  /* should be clk270 */
   /* how do I make this make timing? */
   ODDR #(
     .DDR_CLK_EDGE ("SAME_EDGE"),
@@ -308,8 +319,6 @@ module qdrc_infrastructure(
     .Q1 (qdr_q_rise_int),
     .Q2 (qdr_q_fall_int)
   );
-
-  assign debug = 8'b0;
 
   assign qdr_q_rise = qdr_q_rise_int;
   assign qdr_q_fall = qdr_q_fall_int;
