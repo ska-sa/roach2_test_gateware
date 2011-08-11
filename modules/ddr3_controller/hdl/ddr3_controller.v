@@ -146,7 +146,7 @@ module ddr3_controller #
    parameter WRLVL                   = "ON",
                                        // # = "ON" - DDR3 SDRAM
                                        //   = "OFF" - DDR2 SDRAM.
-   parameter PHASE_DETECT            = "OFF",
+   parameter PHASE_DETECT            = "ON",
                                        // # = "ON", "OFF".
    parameter RTT_NOM                 = "60",
                                        // RTT_NOM (ODT) (Mode Register 1).

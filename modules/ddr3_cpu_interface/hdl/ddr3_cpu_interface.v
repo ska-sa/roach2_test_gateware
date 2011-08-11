@@ -140,29 +140,29 @@ module ddr3_cpu_interface(
       59:  wb_dat_o_reg <= wr_buffer[ 63:32]  ;
       60:  wb_dat_o_reg <= wr_buffer[ 31:0 ]  ;
 
-      64:  wb_dat_o_reg <= rd_buffer[575:560] ;
-      65:  wb_dat_o_reg <= rd_buffer[559:528] ;
-      66:  wb_dat_o_reg <= rd_buffer[527:496] ;
-      67:  wb_dat_o_reg <= rd_buffer[495:464] ;
-      68:  wb_dat_o_reg <= rd_buffer[463:432] ;
+      80:  wb_dat_o_reg <= rd_buffer[575:560] ;
+      81:  wb_dat_o_reg <= rd_buffer[559:528] ;
+      82:  wb_dat_o_reg <= rd_buffer[527:496] ;
+      83:  wb_dat_o_reg <= rd_buffer[495:464] ;
+      84:  wb_dat_o_reg <= rd_buffer[463:432] ;
 
-      72:  wb_dat_o_reg <= rd_buffer[431:416] ;
-      73:  wb_dat_o_reg <= rd_buffer[415:384] ;
-      74:  wb_dat_o_reg <= rd_buffer[383:352] ;
-      75:  wb_dat_o_reg <= rd_buffer[351:320] ;
-      76:  wb_dat_o_reg <= rd_buffer[319:288] ;
+      88:  wb_dat_o_reg <= rd_buffer[431:416] ;
+      89:  wb_dat_o_reg <= rd_buffer[415:384] ;
+      90:  wb_dat_o_reg <= rd_buffer[383:352] ;
+      91:  wb_dat_o_reg <= rd_buffer[351:320] ;
+      92:  wb_dat_o_reg <= rd_buffer[319:288] ;
 
-      80:  wb_dat_o_reg <= rd_buffer[287:272] ;
-      81:  wb_dat_o_reg <= rd_buffer[271:240] ;
-      82:  wb_dat_o_reg <= rd_buffer[239:208] ;
-      83:  wb_dat_o_reg <= rd_buffer[207:176] ;
-      84:  wb_dat_o_reg <= rd_buffer[175:144] ;
+      64:  wb_dat_o_reg <= rd_buffer[287:272] ;
+      65:  wb_dat_o_reg <= rd_buffer[271:240] ;
+      66:  wb_dat_o_reg <= rd_buffer[239:208] ;
+      67:  wb_dat_o_reg <= rd_buffer[207:176] ;
+      68:  wb_dat_o_reg <= rd_buffer[175:144] ;
 
-      88:  wb_dat_o_reg <= rd_buffer[143:128] ;
-      89:  wb_dat_o_reg <= rd_buffer[127:96]  ;
-      91:  wb_dat_o_reg <= rd_buffer[ 95:64]  ;
-      92:  wb_dat_o_reg <= rd_buffer[ 63:32]  ;
-      93:  wb_dat_o_reg <= rd_buffer[ 31:0 ]  ;
+      72:  wb_dat_o_reg <= rd_buffer[143:128] ;
+      73:  wb_dat_o_reg <= rd_buffer[127:96]  ;
+      74:  wb_dat_o_reg <= rd_buffer[ 95:64]  ;
+      75:  wb_dat_o_reg <= rd_buffer[ 63:32]  ;
+      76:  wb_dat_o_reg <= rd_buffer[ 31:0 ]  ;
      default: 
         wb_dat_o_reg  <= 32'b0;
     endcase
