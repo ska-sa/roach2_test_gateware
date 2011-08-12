@@ -1011,7 +1011,7 @@ module toplevel(
     .BANK_WIDTH    (3),
     .CK_WIDTH      (1),
     .CKE_WIDTH     (1),
-    .COL_WIDTH     (11),
+    .COL_WIDTH     (10),
     .CS_WIDTH      (1),
     .DM_WIDTH      (9),
     .DQ_WIDTH      (72),
