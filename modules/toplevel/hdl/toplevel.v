@@ -442,7 +442,7 @@ module toplevel(
     .regout_7  (debug_regout_7)
   );
 
-  assign debug_clk = clk_100;
+  assign debug_clk = clk_200;
 
   /************************ ZDOK 0 ****************************/
 
@@ -1173,7 +1173,7 @@ module toplevel(
   wire  [8*4-1:0] mgt_rxbufferr;
 
   wire  [8*4-1:0] mgt_rxlock;
-  wire  [8*4-1:0] mgt_rxelecidle;
+  //wire  [8*4-1:0] mgt_rxelecidle;
 
   wire  [8*1-1:0] mgt_loopback;
   wire  [8*1-1:0] mgt_powerdown;
@@ -1183,7 +1183,7 @@ module toplevel(
   wire  [8*4-1:0] mgt_txdiffctrl;
   wire  [8*3-1:0] mgt_rxeqmix;
 
-  wire [8*16-1:0] mgt_status;
+  //wire [8*16-1:0] mgt_status;
 
   /* XAUI XGMII signals */
   wire [64*8-1:0] xgmii_txd;
@@ -1240,7 +1240,8 @@ module toplevel(
 `endif
 
   xaui_infrastructure #(
-    .ENABLE_MASK (TGE_ENABLE_MASK)
+    .ENABLE_MASK   (TGE_ENABLE_MASK),
+    .RX_LANE_STEER (1)
   ) xaui_infrastructure_inst (
     .mgt_reset          (rst_100),
 
@@ -1270,7 +1271,7 @@ module toplevel(
     .mgt_rxbufferr      (mgt_rxbufferr),
 
     .mgt_rxlock         (mgt_rxlock),
-    .mgt_rxelecidle     (mgt_rxelecidle),
+    .mgt_rxelecidle     (),
 
     .mgt_loopback       (mgt_loopback),
     .mgt_powerdown      (mgt_powerdown),
@@ -1280,7 +1281,7 @@ module toplevel(
     .mgt_txdiffctrl     (mgt_txdiffctrl),
     .mgt_rxeqmix        (mgt_rxeqmix),
 
-    .mgt_status         (mgt_status)
+    .mgt_status         ()
   );
 
   wire [7:0] xaui_loopback = 8'b0000_0000;
@@ -1325,8 +1326,17 @@ module toplevel(
   wire        tge_rx_overrun_ack   [7:0];
   wire        tge_rx_ack           [7:0];
 
+  wire  [7:0] tge_test_rst;
+  wire  [7:0] tge_test_valid;
+  wire  [7:0] tge_test_ok;
+
   genvar I;
 generate for (I=0; I < 8; I=I+1) begin : gen_10ge
+
+  wire [3:0] xaui_tx_rst_int;
+  wire [3:0] xaui_rx_rst_int;
+  assign mgt_tx_rst[I] = |xaui_tx_rst_int;
+  assign mgt_rx_rst[I] = |xaui_rx_rst_int;
 
   xaui_phy xaui_phy_inst (
     .clk              (xaui_clk),
@@ -1345,8 +1355,8 @@ generate for (I=0; I < 8; I=I+1) begin : gen_10ge
     .mgt_syncok       (mgt_rxsyncok[I*4+:4]),
     .mgt_loopback     (mgt_loopback[I]),
     .mgt_powerdown    (mgt_powerdown[I]),
-    .mgt_tx_reset     (mgt_tx_rst[I*4]),
-    .mgt_rx_reset     (mgt_rx_rst[I*4]),
+    .mgt_tx_reset     (xaui_tx_rst_int),
+    .mgt_rx_reset     (xaui_rx_rst_int),
 
     .xgmii_txd        (xgmii_txd[I*64+:64]),
     .xgmii_txc        (xgmii_txc[I*8+:8]),
@@ -1357,7 +1367,19 @@ generate for (I=0; I < 8; I=I+1) begin : gen_10ge
     .loopback_en      (xaui_loopback[I])
   );
 
-  kat_ten_gb_eth kat_ten_gb_eth_inst (
+  kat_ten_gb_eth #(
+    .FABRIC_MAC     (48'h1234_5678_9abc),
+    .FABRIC_IP      ({8'd192, 8'd168, 8'd43, 8'd40}),
+    .FABRIC_PORT    (16'h6666),
+    .FABRIC_GATEWAY (8'd1),
+    .FABRIC_ENABLE  (1),
+    .SWING          (1),
+    .PREEMPHASYS    (1),
+    .CPU_TX_ENABLE  (1),
+    .CPU_RX_ENABLE  (1),
+    .RX_DIST_RAM    (0),
+    .LARGE_PACKETS  (0)
+  ) kat_ten_gb_eth_inst (
     .clk (clk_200),
     .rst (rst_200),
 
@@ -1396,7 +1418,7 @@ generate for (I=0; I < 8; I=I+1) begin : gen_10ge
     .led_tx (),
 
     .xaui_clk   (xaui_clk),
-    .xaui_reset (xaui_reset),
+    .xaui_reset (xaui_rst),
     .phy_status ({xaui_err_cnt[I], 8'b0, xaui_status[I*8+:8]}),
 
     .xgmii_txd   (xgmii_txd[I*64+:64]),
@@ -1411,66 +1433,106 @@ generate for (I=0; I < 8; I=I+1) begin : gen_10ge
 
   );
 
-  reg ppc_poenR;
-  reg ppc_poenRR;
-
-  reg [1:0] foo_state;
-
-  reg [31:0] ppc_data_buf;
-  reg [31:0] ppc_addr_buf;
-
-  reg eek;
+  reg [63:0] tge_data_counter;
+  reg  [5:0] pkt_counter;
+  reg        tge_data_valid;
   
-  reg [2:0] moo;
-
   always @(posedge clk_200) begin
-    eek <= 1'b0;
-
-    ppc_poenR  <= ppc_poen;
-    ppc_poenRR <= ppc_poenR;
-
     if (rst_200) begin
-      foo_state <= 2'b0;
+      tge_data_counter <= 64'b0;
+      tge_data_valid <= 1'b0;
     end else begin
-      case (foo_state) 
-        2'b0: begin
-          if (!ppc_poenRR) begin
-            foo_state <= 2'b1;
-          end
-        end
-        2'b1: begin
-          if (ppc_poenRR) begin
-            foo_state <= 2'd0;
-            ppc_data_buf <= epb_data_i;
-            ppc_addr_buf <= ppc_paddr;
-            eek <= 1'b1;
-          end
-        end
-      endcase
+      tge_data_valid <= tge_tx_afull[I] ? 1'b0 : ~tge_data_valid;
+      if (tge_data_valid)
+        tge_data_counter <= tge_data_counter + 64'b1;
     end
   end
 
-  reg [5:0] pkt_counter;
   always @(posedge clk_200) begin
     if (rst_200) begin
       pkt_counter <= 6'd0;
     end else begin
-      if (eek)
+      if (tge_data_valid)
         pkt_counter <= pkt_counter + 6'd1;
     end
   end
 
-  assign tge_tx_data[I]         = {ppc_addr_buf, ppc_data_buf};
-  assign tge_tx_valid[I]        = eek;
+  assign tge_tx_data[I]         = tge_data_counter;
+  assign tge_tx_valid[I]        = tge_data_valid;
   assign tge_tx_end_of_frame[I] = pkt_counter == {6{1'b1}};
-  assign tge_tx_dest_ip[I]      = {8'd192, 8'd168, 8'd43, 8'd1};
-  assign tge_tx_dest_port[I]    = 16'd6969;
+  assign tge_tx_dest_ip[I]      = {8'd192, 8'd168, 8'd43, 8'd40};
+  assign tge_tx_dest_port[I]    = 16'h6666;
 
   assign tge_rx_overrun_ack[I]   = 1'b0;
   assign tge_rx_ack[I]           = 1'b1;
 
+  reg tge_test_valid_reg;
+  reg tge_test_ok_reg;
+
+  assign tge_test_ok[I]    = tge_test_ok_reg;
+  assign tge_test_valid[I] = tge_test_valid_reg;
+
+  reg [63:0] tge_test_prev_val;
+  reg [63:0] tge_test_expected_val;
+  reg [63:0] tge_test_got_val;
+
+  reg tge_test_compare;
+
+  reg [9:0] tge_test_inactivity_counter;
+
+  always @(posedge clk_200) begin
+    tge_test_inactivity_counter <= tge_test_inactivity_counter + 10'b1;
+
+    /* do we do a comparison */
+    tge_test_compare      <= tge_rx_valid[I] && tge_test_valid_reg;
+    tge_test_expected_val <= tge_test_prev_val + 64'b1;
+    tge_test_got_val      <= tge_rx_data[I];
+
+    if (tge_test_compare && tge_test_expected_val != tge_test_got_val)
+      tge_test_ok_reg <= 1'b0;
+
+    if (tge_rx_valid[I])
+      tge_test_prev_val <= tge_rx_data[I];
+
+    if (rst_200 || tge_test_rst[I]) begin
+      tge_test_valid_reg <= 1'b0;
+      tge_test_ok_reg    <= 1'b1;
+      tge_test_compare   <= 1'b0;
+    end else begin
+      if (tge_rx_valid[I]) begin
+        if (tge_test_valid_reg) begin
+          tge_test_ok_reg    <= 1'b0;
+        end else begin
+          tge_test_valid_reg <= 1'b1;
+        end
+      end
+    end
+
+    if (tge_rx_valid[I])
+      tge_test_inactivity_counter <= 10'b0;
+
+    if (tge_test_inactivity_counter == {10{1'b1}})
+      tge_test_valid_reg <= 1'b0;
+  end
+
+  assign tge_test_rst[I]    = debug_regout_0[I];
+
+  assign debug_regin_0[I]   = tge_test_valid[I];
+  assign debug_regin_0[I+8] = tge_test_ok[I];
+
 end endgenerate
 `endif
+
+  reg [47:0] foo_counter;
+  reg [15:0] foo2_counter;
+  always @(posedge clk_200) begin
+    if (tge_rx_valid[0])
+      foo_counter <= foo_counter + 1'b1;
+    if (tge_rx_valid[0] && tge_rx_end_of_frame[0])
+      foo2_counter <= foo2_counter + 1'b1;
+  end
+  assign debug_regin_1 = {foo2_counter, foo_counter[47:32]};
+  assign debug_regin_2 = foo_counter[31:0];
   
   
   /********* SGMII PHY ************/
@@ -1715,9 +1777,6 @@ end endgenerate
 
 `endif
 
-  assign debug_regin_0 = {31'h0, idelay_rdy};
-  assign debug_regin_1 = 32'hdead_0001;
-  assign debug_regin_2 = 32'hdead_0002;
   assign debug_regin_3 = 32'hdead_0003;
   assign debug_regin_4 = 32'hdead_0004;
   assign debug_regin_5 = 32'hdead_0005;

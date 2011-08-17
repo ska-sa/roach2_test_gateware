@@ -57,7 +57,8 @@ module gpio_controller #(
       2'd1: wb_dat_o_reg <= gpio_out_arr[selected_reg];
       2'd2: wb_dat_o_reg <= gpio_oe_arr[selected_reg];
       2'd3: wb_dat_o_reg <= gpio_ded_arr[selected_reg];
-      default: wb_dat_o_reg <= 32'b0;
+      default:
+            wb_dat_o_reg <= 32'b0;
     endcase
   end
 

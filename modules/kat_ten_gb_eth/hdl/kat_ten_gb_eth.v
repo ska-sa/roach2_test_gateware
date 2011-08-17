@@ -388,15 +388,15 @@ module kat_ten_gb_eth #(
       tx_stretch   <= {LED_WIDTH{1'b0}};
     end else begin
       if (down_stretch[LED_WIDTH-1]) begin
-        down_stretch <= down_stretch - 1;
+        down_stretch <= down_stretch - {{LED_WIDTH-1{1'b0}}, 1'b1};
       end
 
       if (rx_stretch[LED_WIDTH-1]) begin
-        rx_stretch <= rx_stretch - 1;
+        rx_stretch <= rx_stretch - {{LED_WIDTH-1{1'b0}}, 1'b1};
       end
 
       if (tx_stretch[LED_WIDTH-1]) begin
-        tx_stretch <= tx_stretch - 1;
+        tx_stretch <= tx_stretch - {{LED_WIDTH-1{1'b0}}, 1'b1}; 
       end
 
       if (down_trig) begin

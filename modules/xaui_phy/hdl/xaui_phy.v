@@ -93,14 +93,15 @@ module xaui_phy(
     .mgt_rx_reset         (mgt_rx_reset),
     .signal_detect        (4'b1111)
   );
+  // synthesis attribute box_type xaui_inst "user_black_box"
 
   /**************** Resets ***********************/
 
   assign mgt_tx_reset = 4'b0;
 
   reg reset_state;
-  localparam LOOK = 0;
-  localparam WAIT = 1;
+  localparam LOOK = 1'b0;
+  localparam WAIT = 1'b1;
 
   localparam WAIT_BITS = 24;
 
@@ -119,7 +120,7 @@ module xaui_phy(
         end
         WAIT: begin
           if (|wait_counter) begin
-            wait_counter <= wait_counter - 1;
+            wait_counter <= wait_counter - {{WAIT_BITS - 1{1'b0}}, 1'b1};
           end else begin
             reset_state  <= LOOK;
           end
@@ -134,7 +135,7 @@ module xaui_phy(
       mgt_rx_reset_stretch <= 4'b1111;
     end else begin
       if (mgt_rx_reset_stretch)
-        mgt_rx_reset_stretch <= mgt_rx_reset_stretch - 1;
+        mgt_rx_reset_stretch <= mgt_rx_reset_stretch - 4'b1;
     end
   end
 

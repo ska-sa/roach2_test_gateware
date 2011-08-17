@@ -52,6 +52,7 @@ module xaui_infrastructure #(
   wire  [8*8-1:0] mgt_rxcodevalid_swap;
   wire  [8*4-1:0] mgt_rxbufferr_swap;
   wire  [8*4-1:0] mgt_rxelecidle_swap;
+  wire  [8*4-1:0] mgt_rxlock_swap;
 
   wire [2:0] gtx_refclk;
   wire [2:0] pma_reset;
@@ -154,7 +155,6 @@ generate for (I=0; I < 8; I=I+1) begin : gtx_wrap_gen
     .RXRESET_IN                     (mgt_rx_rst[I]),
     .RXUSRCLK2_IN                   (xaui_clk),
     //----- Receive Ports - RX Driver,OOB signalling,Coupling and Eq.,CDR ------
-    .RXCDRRESET_IN                  (pma_reset_map[I]),
     .RXELECIDLE_OUT                 (mgt_rxelecidle_swap[I*4+:4]),
     .RXEQMIX_IN                     (mgt_rxeqmix[I*3+:3]),
     .RXN_IN                         (mgt_rx_n[I*4+:4]),
@@ -168,7 +168,7 @@ generate for (I=0; I < 8; I=I+1) begin : gtx_wrap_gen
     .GTXRXRESET_IN                  (pma_reset_map[I]),
     .MGTREFCLKRX_IN                 (gtx_refclk_map[I]),
     .PLLRXRESET_IN                  (pma_reset_map[I]),
-    .RXPLLLKDET_OUT                 (mgt_rxlock[I*4+:4]),
+    .RXPLLLKDET_OUT                 (mgt_rxlock_swap[I*4+:4]),
     .RXRESETDONE_OUT                (rx_resetdone[I*4+:4]),
     .RXPOLARITY_IN                  (rx_polarity[I*4+:4]),
     //---------------- Transmit Ports - TX Data Path interface -----------------
@@ -193,9 +193,9 @@ generate for (I=0; I < 8; I=I+1) begin : gtx_wrap_gen
   );
 
   assign mgt_rxsyncok_swap[I*4+:4] = {rxlossofsync[I*8+7],
-                                 rxlossofsync[I*8+5],
-                                 rxlossofsync[I*8+3],
-                                 rxlossofsync[I*8+1]};
+                                      rxlossofsync[I*8+5],
+                                     rxlossofsync[I*8+3],
+                                      rxlossofsync[I*8+1]};
 
   assign mgt_status[I*16+:16] = {4'b0, mgt_rxbufferr[I*4+:4], 4'b0, mgt_rxelecidle[I*4+:4]};
 end endgenerate
@@ -220,52 +220,35 @@ generate if (!RX_LANE_STEER) begin : no_rx_steer
   assign  mgt_rxsyncok    = mgt_rxsyncok_swap;
   assign  mgt_rxcodevalid = mgt_rxcodevalid_swap;
   assign  mgt_rxbufferr   = mgt_rxbufferr_swap;
+  assign  mgt_rxelecidle  = mgt_rxelecidle_swap;
+  assign  mgt_rxlock      = mgt_rxlock_swap;
 
   assign mgt_rxencommaalign_swap = mgt_rxencommaalign;
 
 end else begin : rx_steer
 
-  assign  mgt_rxdata      = {mgt_rxdata_swap[15:0 ],
-                             mgt_rxdata_swap[31:16],
-                             mgt_rxdata_swap[47:32],
-                             mgt_rxdata_swap[61:48]};
+  xaui_rx_steer xaui_rx_steer_inst(
+    .rxdata_in          (mgt_rxdata_swap),
+    .rxcharisk_in       (mgt_rxcharisk_swap),
+    .rxcodecomma_in     (mgt_rxcodecomma_swap),
+    .rxsyncok_in        (mgt_rxsyncok_swap),
+    .rxcodevalid_in     (mgt_rxcodevalid_swap),
+    .rxbufferr_in       (mgt_rxbufferr_swap),
+    .rxelecidle_in      (mgt_rxelecidle_swap),
+    .rxlock_in          (mgt_rxlock_swap),
+    .rxencommaalign_in  (mgt_rxencommaalign),
+    .rxdata_out         (mgt_rxdata),
+    .rxcharisk_out      (mgt_rxcharisk),
+    .rxcodecomma_out    (mgt_rxcodecomma),
+    .rxsyncok_out       (mgt_rxsyncok),
+    .rxcodevalid_out    (mgt_rxcodevalid),
+    .rxbufferr_out      (mgt_rxbufferr),
+    .rxelecidle_out     (mgt_rxelecidle),
+    .rxlock_out         (mgt_rxlock),
+    .rxencommaalign_out (mgt_rxencommaalign_swap)
+  );
 
-  assign  mgt_rxcharisk   = {mgt_rxcharisk_swap[1:0], 
-                             mgt_rxcharisk_swap[3:2], 
-                             mgt_rxcharisk_swap[5:4], 
-                             mgt_rxcharisk_swap[7:6]};
-
-  assign  mgt_rxcodecomma = {mgt_rxcodecomma_swap[1:0], 
-                             mgt_rxcodecomma_swap[3:2], 
-                             mgt_rxcodecomma_swap[5:4], 
-                             mgt_rxcodecomma_swap[7:6]};
-
-  assign  mgt_rxsyncok    = {mgt_rxsyncok_swap[0], 
-                             mgt_rxsyncok_swap[1], 
-                             mgt_rxsyncok_swap[2], 
-                             mgt_rxsyncok_swap[3]};
-
-  assign  mgt_rxcodevalid = {mgt_rxcodevalid_swap[1:0],
-                             mgt_rxcodevalid_swap[3:2],
-                             mgt_rxcodevalid_swap[5:4],
-                             mgt_rxcodevalid_swap[7:6]};
-
-  assign  mgt_rxbufferr   = {mgt_rxbufferr_swap[0],
-                             mgt_rxbufferr_swap[1],
-                             mgt_rxbufferr_swap[2],
-                             mgt_rxbufferr_swap[3]};
-
-  assign  mgt_rxelecidle   = {mgt_rxelecidle_swap[0],
-                              mgt_rxelecidle_swap[1],
-                              mgt_rxelecidle_swap[2],
-                              mgt_rxelecidle_swap[3]};
-
-  assign mgt_rxencommaalign_swap = {mgt_rxencommaalign[0],
-                                    mgt_rxencommaalign[1],
-                                    mgt_rxencommaalign[2],
-                                    mgt_rxencommaalign[3]};
-
-end endgenerate
+end endgenerate // rx_steer
 
   
 endmodule

@@ -99,6 +99,7 @@ SRC=./modules/toplevel/hdl/toplevel.v \
 		./modules/ddr3_cpu_interface/hdl/ddr3_cpu_interface.v \
 		./modules/xaui_infrastructure/hdl/xaui_infrastructure.v \
 		./modules/xaui_infrastructure/hdl/gtx_quad.v \
+		./modules/xaui_infrastructure/hdl/xaui_rx_steer.v \
 		./modules/xaui_phy/hdl/xaui_phy.v \
 		./modules/xaui_phy/hdl/xaui_v9_2.v \
 	  ./modules/kat_ten_gb_eth/hdl/arp_cache.v \

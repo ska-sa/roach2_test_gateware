@@ -301,20 +301,31 @@ module tge_bus_attach #(
 
   /********* Handle memory interfaces ***********/
 
+  /* Since we are a 32-bit interface writing to a 64 bit without byte enables on the bram
+     we need to prefetch the bit we aren't writing, so we need to delay one extra cycle on
+     the write before commiting the new data */
+
   reg arp_cache_we, tx_buffer_we;
 
   reg [63:0] write_data; //write data for all three buffers
+
+  reg arp_sel_z;
+  reg txbuf_sel_z;
 
   always @(posedge cpu_clk) begin
     //strobes
     arp_cache_we <= 1'b0;
     tx_buffer_we <= 1'b0;
 
+    // Need to wait one cycle to read ahead before write can happen
+    arp_sel_z   <= arp_sel;
+    txbuf_sel_z <= txbuf_sel;
+
     if (cpu_clk) begin
     end else begin
       //populate write_data according to wishbone transaction info & contents
       //of memory
-      if (arp_sel && cpu_wait) begin
+      if (arp_sel_z) begin
         arp_cache_we <= 1'b1;
 
         write_data[ 7: 0] <= arp_addr[2] == 1'b1 & cpu_sel[0] ? cpu_din[ 7: 0] : arp_cache_rd_data[ 7: 0]; 
@@ -324,7 +335,7 @@ module tge_bus_attach #(
         write_data[39:32] <= arp_addr[2] == 1'b0 & cpu_sel[0] ? cpu_din[ 7: 0] : arp_cache_rd_data[39:32]; 
         write_data[47:40] <= arp_addr[2] == 1'b0 & cpu_sel[1] ? cpu_din[15: 8] : arp_cache_rd_data[47:40]; 
       end
-      if (txbuf_sel && cpu_wait) begin
+      if (txbuf_sel_z) begin
         tx_buffer_we <= 1'b1;
 
         write_data[7:0]   <= txbuf_addr[2] == 1'b1 & cpu_sel[0] ? cpu_din[ 7: 0] : cpu_tx_buffer_rd_data[ 7: 0];

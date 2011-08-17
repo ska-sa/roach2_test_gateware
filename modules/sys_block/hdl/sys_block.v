@@ -161,14 +161,14 @@ module sys_block #(
           5'h5:  scratchpad[1] <= wb_dat_i;
           5'h6:  scratchpad[2] <= wb_dat_i;
           5'h7:  scratchpad[3] <= wb_dat_i;
-          5'd10: regout_0_reg <= wb_dat_i;
-          5'd11: regout_1_reg <= wb_dat_i;
-          5'd12: regout_2_reg <= wb_dat_i;
-          5'd13: regout_3_reg <= wb_dat_i;
-          5'd14: regout_4_reg <= wb_dat_i;
-          5'd15: regout_5_reg <= wb_dat_i;
-          5'd16: regout_6_reg <= wb_dat_i;
-          5'd17: regout_7_reg <= wb_dat_i;
+          5'h10: regout_0_reg <= wb_dat_i;
+          5'h11: regout_1_reg <= wb_dat_i;
+          5'h12: regout_2_reg <= wb_dat_i;
+          5'h13: regout_3_reg <= wb_dat_i;
+          5'h14: regout_4_reg <= wb_dat_i;
+          5'h15: regout_5_reg <= wb_dat_i;
+          5'h16: regout_6_reg <= wb_dat_i;
+          5'h17: regout_7_reg <= wb_dat_i;
         endcase
       end
     end
@@ -205,6 +205,9 @@ module sys_block #(
       5'h15:  wb_dat_o_reg <= regout_5_reg;
       5'h16:  wb_dat_o_reg <= regout_6_reg;
       5'h17:  wb_dat_o_reg <= regout_7_reg;
+      default:
+              wb_dat_o_reg <= 32'b0;
+        
     endcase
   end
 

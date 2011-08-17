@@ -163,7 +163,6 @@ end;
 	signal xgmii_rxd_aligned                       : std_logic_vector(63 downto 0);
 	signal xgmii_rxc_aligned                       : std_logic_vector(7 downto 0);
 	signal xgmii_rxd_aligned0                      : std_logic_vector(63 downto 0);
-	signal xgmii_rxc_aligned0                      : std_logic_vector(7 downto 0);
 	signal rx_data_is_aligned                      : std_logic;
 	signal rx_enable                               : std_logic_vector(7 downto 0);
 	signal rx_good_frame0                          : std_logic;
@@ -707,7 +706,6 @@ begin
 				xgmii_rxd0         <= xgmii_rxd;
 				xgmii_rxc0         <= xgmii_rxc;
 				xgmii_rxd_aligned0 <= xgmii_rxd_aligned;
-				xgmii_rxc_aligned0 <= xgmii_rxc_aligned;
 
 				-- defaults rx_enable to 0
 				rx_enable          <= "00000000";

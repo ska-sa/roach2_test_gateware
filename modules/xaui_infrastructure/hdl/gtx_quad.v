@@ -12,7 +12,6 @@ module gtx_quad(
     output [63:0] RXDATA_OUT,
     input         RXRESET_IN,
     input         RXUSRCLK2_IN,
-    input         RXCDRRESET_IN,
     output  [3:0] RXELECIDLE_OUT,
     input   [2:0] RXEQMIX_IN,
     input   [3:0] RXN_IN,
@@ -466,6 +465,7 @@ generate for (I=0; I < 4; I=I+1) begin : gen_xaui_gtx
     .TXRATE                         (2'b0),
     .TXRATEDONE                     (),
     .TXRESETDONE                    (TXRESETDONE_OUT[I]),
+    .TXDLYALIGNMONENB               (1'b1),
     //------------------- Transmit Ports - TX PRBS Generator -------------------
     .TXENPRBSTST                    (3'b0),
     .TXPRBSFORCEERR                 (1'b0),

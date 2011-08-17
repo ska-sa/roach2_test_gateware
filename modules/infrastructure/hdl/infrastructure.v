@@ -97,9 +97,11 @@ module infrastructure(
   );
   
   /* reset gen */
+  reg sys_rst_reg_z;
   reg sys_rst_reg;
   reg [15:0] sys_rst_counter;
   always @(posedge sys_clk_ds) begin
+    sys_rst_reg_z <= sys_rst_reg;
     if (!pll_lock) begin
       sys_rst_reg     <= 1'b0;
       sys_rst_counter <= {16{1'b0}};
@@ -114,7 +116,7 @@ module infrastructure(
     end
 
   end
-  assign sys_rst = sys_rst_reg;
+  assign sys_rst = sys_rst_reg_z;
 
   /* io delay reset */
 
