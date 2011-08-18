@@ -1,6 +1,6 @@
 module xaui_infrastructure #(
     parameter ENABLE_MASK   = 8'b1111_1111,
-    parameter RX_LANE_STEER = 0
+    parameter RX_LANE_STEER = 8'b0000_0000
   ) (
     input             mgt_reset,
 
@@ -131,7 +131,7 @@ module xaui_infrastructure #(
   wire [8*4-1:0] rx_resetdone;
   wire [8*4-1:0] tx_resetdone;
 
-  wire [8*4-1:0] rx_polarity = 32'hffff_ffff;
+  wire [8*4-1:0] rx_polarity = 32'h0fff_0fff;
 
   genvar I;
 generate for (I=0; I < 8; I=I+1) begin : gtx_wrap_gen
@@ -213,21 +213,9 @@ end endgenerate
 
   /**** RX rerouting to compensate for crossover at XAUI endpoint ****/
 
-generate if (!RX_LANE_STEER) begin : no_rx_steer
-  assign  mgt_rxdata      = mgt_rxdata_swap;
-  assign  mgt_rxcharisk   = mgt_rxcharisk_swap;
-  assign  mgt_rxcodecomma = mgt_rxcodecomma_swap;
-  assign  mgt_rxsyncok    = mgt_rxsyncok_swap;
-  assign  mgt_rxcodevalid = mgt_rxcodevalid_swap;
-  assign  mgt_rxbufferr   = mgt_rxbufferr_swap;
-  assign  mgt_rxelecidle  = mgt_rxelecidle_swap;
-  assign  mgt_rxlock      = mgt_rxlock_swap;
-
-  assign mgt_rxencommaalign_swap = mgt_rxencommaalign;
-
-end else begin : rx_steer
-
-  xaui_rx_steer xaui_rx_steer_inst(
+  xaui_rx_steer #(
+    .LANE_STEER (RX_LANE_STEER)
+  ) xaui_rx_steer_inst (
     .rxdata_in          (mgt_rxdata_swap),
     .rxcharisk_in       (mgt_rxcharisk_swap),
     .rxcodecomma_in     (mgt_rxcodecomma_swap),
@@ -247,8 +235,5 @@ end else begin : rx_steer
     .rxlock_out         (mgt_rxlock),
     .rxencommaalign_out (mgt_rxencommaalign_swap)
   );
-
-end endgenerate // rx_steer
-
   
 endmodule

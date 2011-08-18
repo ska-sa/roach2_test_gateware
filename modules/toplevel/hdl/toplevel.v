@@ -1241,7 +1241,7 @@ module toplevel(
 
   xaui_infrastructure #(
     .ENABLE_MASK   (TGE_ENABLE_MASK),
-    .RX_LANE_STEER (1)
+    .RX_LANE_STEER (8'b0111_0111)
   ) xaui_infrastructure_inst (
     .mgt_reset          (rst_100),
 
@@ -1500,11 +1500,7 @@ generate for (I=0; I < 8; I=I+1) begin : gen_10ge
       tge_test_compare   <= 1'b0;
     end else begin
       if (tge_rx_valid[I]) begin
-        if (tge_test_valid_reg) begin
-          tge_test_ok_reg    <= 1'b0;
-        end else begin
-          tge_test_valid_reg <= 1'b1;
-        end
+        tge_test_valid_reg <= 1'b1;
       end
     end
 
@@ -1523,18 +1519,6 @@ generate for (I=0; I < 8; I=I+1) begin : gen_10ge
 end endgenerate
 `endif
 
-  reg [47:0] foo_counter;
-  reg [15:0] foo2_counter;
-  always @(posedge clk_200) begin
-    if (tge_rx_valid[0])
-      foo_counter <= foo_counter + 1'b1;
-    if (tge_rx_valid[0] && tge_rx_end_of_frame[0])
-      foo2_counter <= foo2_counter + 1'b1;
-  end
-  assign debug_regin_1 = {foo2_counter, foo_counter[47:32]};
-  assign debug_regin_2 = foo_counter[31:0];
-  
-  
   /********* SGMII PHY ************/
   
   reg sgmii_reset_R;
@@ -1777,6 +1761,8 @@ end endgenerate
 
 `endif
 
+  assign debug_regin_1 = 32'hdead_0001;
+  assign debug_regin_2 = 32'hdead_0002;
   assign debug_regin_3 = 32'hdead_0003;
   assign debug_regin_4 = 32'hdead_0004;
   assign debug_regin_5 = 32'hdead_0005;
