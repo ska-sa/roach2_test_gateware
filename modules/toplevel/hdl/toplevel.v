@@ -6,6 +6,7 @@ module toplevel(
     input          sys_clk_n,
     input          sys_clk_p,
 
+    /* TODO: add tests for aux signals */
     input          aux_clk_n,
     input          aux_clk_p,
     input          aux_synci_n,
@@ -21,6 +22,7 @@ module toplevel(
 
     input          ppc_perclk,
     input   [5:29] ppc_paddr,
+    /* TODO: add test for ppc_pcsn[1] */
     input    [1:0] ppc_pcsn,
     inout   [0:31] ppc_pdata,
     input    [0:3] ppc_pben,
@@ -30,6 +32,7 @@ module toplevel(
     output         ppc_prdy,
     output         ppc_doen,
 
+    /* TODO: add test for v6_irqn */
     output         v6_irqn,
 
     output         ddr3_ck_n,
@@ -94,11 +97,6 @@ module toplevel(
     inout   [37:0] zdok1_dp_n,
     inout   [37:0] zdok1_dp_p,
 
-    /*
-    input    [7:0] ext_refclk_p,
-    input    [7:0] ext_refclk_n,
-    */
-
     input          sgmii_rx_n,
     input          sgmii_rx_p,
     output         sgmii_tx_n,
@@ -112,6 +110,12 @@ module toplevel(
     output  [31:0] mgt_tx_p,
     input   [31:0] mgt_rx_n,
     input   [31:0] mgt_rx_p,
+
+    /*
+    input    [7:0] ext_refclk_p,
+    input    [7:0] ext_refclk_n,
+    */
+    /* TODO: add test for mezzanine clock inputs */
 
     input    [2:0] xaui_refclk_n,
     input    [2:0] xaui_refclk_p
@@ -539,6 +543,7 @@ module toplevel(
 
   wire qdr_pll_lock;
 
+  /* TODO: make CLK_FREQ a parameter */
   clk_gen #(
     .CLK_FREQ (266)
   ) clk_gen_qdr (
@@ -564,6 +569,7 @@ module toplevel(
   //synthesis attribute equivalent_register_removal of qdr3_rst is no
 
   always @(posedge qdr_clk0) begin
+    /* TODO: should reset with a global signal */
     //qdr_rstR  <= rst_100 || !idelay_rdy;
     qdr_rstR  <= !qdr_pll_lock || !idelay_rdy;
     qdr_rstRR <= qdr_rstR;

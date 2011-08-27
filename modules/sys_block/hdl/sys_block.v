@@ -157,6 +157,7 @@ module sys_block #(
     end else begin
       if (wb_stb_i && wb_cyc_i && wb_we_i) begin
         case (wb_adr_i[6:2])
+          /* TODO: add byte enables to test */
           5'h4:  scratchpad[0] <= wb_dat_i;
           5'h5:  scratchpad[1] <= wb_dat_i;
           5'h6:  scratchpad[2] <= wb_dat_i;
