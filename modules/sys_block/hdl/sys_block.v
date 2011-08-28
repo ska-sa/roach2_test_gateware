@@ -158,10 +158,46 @@ module sys_block #(
       if (wb_stb_i && wb_cyc_i && wb_we_i) begin
         case (wb_adr_i[6:2])
           /* TODO: add byte enables to test */
-          5'h4:  scratchpad[0] <= wb_dat_i;
-          5'h5:  scratchpad[1] <= wb_dat_i;
-          5'h6:  scratchpad[2] <= wb_dat_i;
-          5'h7:  scratchpad[3] <= wb_dat_i;
+          5'h4: begin
+            if (wb_sel_i[0])
+              scratchpad[0] <= wb_dat_i[7:0];
+            if (wb_sel_i[1])
+              scratchpad[0] <= wb_dat_i[15:8];
+            if (wb_sel_i[2])
+              scratchpad[0] <= wb_dat_i[23:16];
+            if (wb_sel_i[3])
+              scratchpad[0] <= wb_dat_i[31:24];
+          end
+          5'h5: begin
+            if (wb_sel_i[0])
+              scratchpad[1] <= wb_dat_i[7:0];
+            if (wb_sel_i[1])
+              scratchpad[1] <= wb_dat_i[15:8];
+            if (wb_sel_i[2])
+              scratchpad[1] <= wb_dat_i[23:16];
+            if (wb_sel_i[3])
+              scratchpad[1] <= wb_dat_i[31:24];
+          end
+          5'h6: begin
+            if (wb_sel_i[0])
+              scratchpad[2] <= wb_dat_i[7:0];
+            if (wb_sel_i[1])
+              scratchpad[2] <= wb_dat_i[15:8];
+            if (wb_sel_i[2])
+              scratchpad[2] <= wb_dat_i[23:16];
+            if (wb_sel_i[3])
+              scratchpad[2] <= wb_dat_i[31:24];
+          end
+          5'h7: begin
+            if (wb_sel_i[0])
+              scratchpad[3] <= wb_dat_i[7:0];
+            if (wb_sel_i[1])
+              scratchpad[3] <= wb_dat_i[15:8];
+            if (wb_sel_i[2])
+              scratchpad[3] <= wb_dat_i[23:16];
+            if (wb_sel_i[3])
+              scratchpad[3] <= wb_dat_i[31:24];
+          end
           5'h10: regout_0_reg <= wb_dat_i;
           5'h11: regout_1_reg <= wb_dat_i;
           5'h12: regout_2_reg <= wb_dat_i;
