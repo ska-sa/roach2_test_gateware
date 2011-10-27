@@ -160,43 +160,43 @@ module sys_block #(
           /* TODO: add byte enables to test */
           5'h4: begin
             if (wb_sel_i[0])
-              scratchpad[0] <= wb_dat_i[7:0];
+              scratchpad[0][7:0] <= wb_dat_i[7:0];
             if (wb_sel_i[1])
-              scratchpad[0] <= wb_dat_i[15:8];
+              scratchpad[0][15:8] <= wb_dat_i[15:8];
             if (wb_sel_i[2])
-              scratchpad[0] <= wb_dat_i[23:16];
+              scratchpad[0][23:16] <= wb_dat_i[23:16];
             if (wb_sel_i[3])
-              scratchpad[0] <= wb_dat_i[31:24];
+              scratchpad[0][31:24] <= wb_dat_i[31:24];
           end
           5'h5: begin
             if (wb_sel_i[0])
-              scratchpad[1] <= wb_dat_i[7:0];
+              scratchpad[1][7:0] <= wb_dat_i[7:0];
             if (wb_sel_i[1])
-              scratchpad[1] <= wb_dat_i[15:8];
+              scratchpad[1][15:8] <= wb_dat_i[15:8];
             if (wb_sel_i[2])
-              scratchpad[1] <= wb_dat_i[23:16];
+              scratchpad[1][23:16]<= wb_dat_i[23:16];
             if (wb_sel_i[3])
-              scratchpad[1] <= wb_dat_i[31:24];
+              scratchpad[1][31:24] <= wb_dat_i[31:24];
           end
           5'h6: begin
             if (wb_sel_i[0])
-              scratchpad[2] <= wb_dat_i[7:0];
+              scratchpad[2][7:0] <= wb_dat_i[7:0];
             if (wb_sel_i[1])
-              scratchpad[2] <= wb_dat_i[15:8];
+              scratchpad[2][15:8] <= wb_dat_i[15:8];
             if (wb_sel_i[2])
-              scratchpad[2] <= wb_dat_i[23:16];
+              scratchpad[2][23:16] <= wb_dat_i[23:16];
             if (wb_sel_i[3])
-              scratchpad[2] <= wb_dat_i[31:24];
+              scratchpad[2][31:24] <= wb_dat_i[31:24];
           end
           5'h7: begin
             if (wb_sel_i[0])
-              scratchpad[3] <= wb_dat_i[7:0];
+              scratchpad[3][7:0] <= wb_dat_i[7:0];
             if (wb_sel_i[1])
-              scratchpad[3] <= wb_dat_i[15:8];
+              scratchpad[3][15:8] <= wb_dat_i[15:8];
             if (wb_sel_i[2])
-              scratchpad[3] <= wb_dat_i[23:16];
+              scratchpad[3][23:16] <= wb_dat_i[23:16];
             if (wb_sel_i[3])
-              scratchpad[3] <= wb_dat_i[31:24];
+              scratchpad[3][31:24] <= wb_dat_i[31:24];
           end
           5'h10: regout_0_reg <= wb_dat_i;
           5'h11: regout_1_reg <= wb_dat_i;
