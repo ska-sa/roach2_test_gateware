@@ -19,7 +19,7 @@ $(PROJECT).prj: $(PROJ_FILE) $(PROJECT).xst
 
 #FPGA/CPLD COMMANDS
 $(NETLIST): $(SRC) $(PROJECT).xst $(PROJECT).prj		
-	$(XST) -ifn $(PROJECT).xst >& xst.log
+	$(XST) -ifn $(PROJECT).xst > xst.log
 	@cp $(PROJECT).ngc $@
 
 clean:
